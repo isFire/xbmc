@@ -52,7 +52,8 @@ JSONRPC_STATUS CGUIOperations::ActivateWindow(const std::string &method, ITransp
   if (iWindow != WINDOW_INVALID)
   {
     std::vector<std::string> params;
-    for (CVariant::const_iterator_array param = parameterObject["parameters"].begin_array(); param != parameterObject["parameters"].end_array(); param++)
+    for (CVariant::const_iterator_array param = parameterObject["parameters"].begin_array();
+         param != parameterObject["parameters"].end_array(); ++param)
     {
       if (param->isString() && !param->empty())
         params.push_back(param->asString());
@@ -129,11 +130,15 @@ JSONRPC_STATUS CGUIOperations::GetPropertyValue(const std::string &property, CVa
 {
   if (property == "currentwindow")
   {
-    result["label"] = CServiceBroker::GetGUI()->GetInfoManager().GetLabel(CServiceBroker::GetGUI()->GetInfoManager().TranslateString("System.CurrentWindow"));
+    result["label"] = CServiceBroker::GetGUI()->GetInfoManager().GetLabel(
+        CServiceBroker::GetGUI()->GetInfoManager().TranslateString("System.CurrentWindow"),
+        INFO::DEFAULT_CONTEXT);
     result["id"] = CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindowOrDialog();
   }
   else if (property == "currentcontrol")
-    result["label"] = CServiceBroker::GetGUI()->GetInfoManager().GetLabel(CServiceBroker::GetGUI()->GetInfoManager().TranslateString("System.CurrentControl"));
+    result["label"] = CServiceBroker::GetGUI()->GetInfoManager().GetLabel(
+        CServiceBroker::GetGUI()->GetInfoManager().TranslateString("System.CurrentControl"),
+        INFO::DEFAULT_CONTEXT);
   else if (property == "skin")
   {
     std::string skinId = CServiceBroker::GetSettingsComponent()->GetSettings()->GetString(CSettings::SETTING_LOOKANDFEEL_SKIN);

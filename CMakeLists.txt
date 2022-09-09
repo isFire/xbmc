@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 if(WIN32)
-  # Version 3.15 is required to use "PREPEND" for dependencies
-  cmake_minimum_required(VERSION 3.15)
+  # Version 3.20 is required for multi-config generator expressions to work
+  cmake_minimum_required(VERSION 3.20)
 endif()
 project(kodi LANGUAGES CXX C ASM)
 
@@ -11,6 +11,7 @@ if(POLICY CMP0069)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/buildtools)
 if(DEPENDS_DIR)
   list(APPEND CMAKE_PREFIX_PATH ${DEPENDS_DIR})
 endif()
@@ -39,10 +40,10 @@ include(cmake/scripts/common/ArchSetup.cmake)
 include(cmake/scripts/common/Macros.cmake)
 include(cmake/scripts/common/ProjectMacros.cmake)
 core_find_versions()
-include(cmake/scripts/${CORE_SYSTEM_NAME}/PathSetup.cmake)
+include(cmake/scripts/common/PathSetup.cmake)
 include(cmake/scripts/common/CompilerSettings.cmake)
 include(ExternalProject)
-
+include(CMakeDependentOption)
 
 # general
 option(VERBOSE            "Enable verbose output?" OFF)
@@ -56,23 +57,31 @@ option(ENABLE_OPTICAL     "Enable optical support?" ON)
 option(ENABLE_PYTHON      "Enable python support?" ON)
 option(ENABLE_TESTING     "Enable testing support?" ON)
 
+# Internal Depends - supported on all platforms
 option(ENABLE_INTERNAL_CROSSGUID "Enable internal crossguid?" ON)
 # use ffmpeg from depends or system
 option(ENABLE_INTERNAL_FFMPEG "Enable internal ffmpeg?" OFF)
 option(ENABLE_INTERNAL_RapidJSON "Enable internal rapidjson?" ON)
+cmake_dependent_option(ENABLE_INTERNAL_FLATBUFFERS "Enable internal flatbuffers?" OFF "DEFINED USE_INTERNAL_LIBS;NOT USE_INTERNAL_LIBS" ON)
+cmake_dependent_option(ENABLE_INTERNAL_NFS "Enable internal libnfs?" OFF "DEFINED USE_INTERNAL_LIBS;NOT USE_INTERNAL_LIBS" ON)
+cmake_dependent_option(ENABLE_INTERNAL_PCRE "Enable internal pcre?" OFF "DEFINED USE_INTERNAL_LIBS;NOT USE_INTERNAL_LIBS" ON)
+cmake_dependent_option(ENABLE_INTERNAL_TAGLIB "Enable internal taglib?" OFF "DEFINED USE_INTERNAL_LIBS;NOT USE_INTERNAL_LIBS" ON)
 
+# Internal Depends - supported on UNIX platforms
 if(UNIX)
   option(FFMPEG_PATH        "Path to external ffmpeg?" "")
   option(ENABLE_INTERNAL_FMT "Enable internal fmt?" OFF)
   option(ENABLE_INTERNAL_FSTRCMP "Enable internal fstrcmp?" OFF)
-  option(ENABLE_INTERNAL_FLATBUFFERS "Enable internal flatbuffers?" OFF)
   option(ENABLE_INTERNAL_DAV1D "Enable internal dav1d?" OFF)
   option(ENABLE_INTERNAL_GTEST "Enable internal gtest?" OFF)
   option(ENABLE_INTERNAL_UDFREAD "Enable internal udfread?" OFF)
   option(ENABLE_INTERNAL_SPDLOG "Enable internal spdlog?" OFF)
+
+  if(ENABLE_INTERNAL_SPDLOG)
+    set(ENABLE_INTERNAL_FMT ON CACHE BOOL "" FORCE)
+  endif()
 endif()
 # prefer kissfft from xbmc/contrib but let use system one on unices
-include(CMakeDependentOption)
 cmake_dependent_option(ENABLE_INTERNAL_KISSFFT "Enable internal kissfft?" ON "UNIX" ON)
 # System options
 if(NOT WIN32)
@@ -81,6 +90,7 @@ if(NOT WIN32)
 endif()
 if(CORE_SYSTEM_NAME STREQUAL linux)
   option(ENABLE_EVENTCLIENTS    "Enable event clients support?" OFF)
+  option(ADDONS_CONFIGURE_AT_STARTUP "Configure binary addons at startup?" ON)
 endif()
 
 # set scope of INTERNAL_DEPS
@@ -129,6 +139,23 @@ foreach(depspec ${PLATFORM_REQUIRED_DEPS})
   set(ENABLE_${depup} "ON" CACHE BOOL "Force enabling required ${depup} support" FORCE)
 endforeach()
 
+# Required tools. Keep in alphabetical order please
+set(required_buildtools FlatC
+                        JsonSchemaBuilder
+                        TexturePacker
+)
+
+# Optional build tools
+set(optional_buildtools CCache
+                        ClangFormat
+                        ClangTidy
+                        Cppcheck
+                        IncludeWhatYouUse)
+
+# Find build tools - Optional and required
+core_optional_dep(${optional_buildtools})
+core_require_dep(${required_buildtools})
+
 # Required dependencies. Keep in alphabetical order please
 set(required_deps ASS
                   Cdio
@@ -161,14 +188,9 @@ set(optional_deps Alsa
                   Bluetooth
                   Bluray
                   CAP
-                  CCache
                   CEC
-                  ClangFormat
-                  ClangTidy
-                  Cppcheck
                   Dav1d
                   DBus
-                  IncludeWhatYouUse
                   Iso9660pp
                   LCMS2
                   LircClient
@@ -189,10 +211,6 @@ set(optional_deps Alsa
 # Check optional deps first, since their availability can influence required ones, e.g. ffmpeg
 core_optional_dep(${optional_deps})
 core_require_dep(${required_deps})
-
-# Required tools
-find_package(TexturePacker REQUIRED)
-find_package(JsonSchemaBuilder REQUIRED)
 
 if(ENABLE_MARIADBCLIENT AND NOT ENABLE_MARIADBCLIENT STREQUAL AUTO AND ENABLE_MYSQLCLIENT AND NOT ENABLE_MYSQLCLIENT STREQUAL AUTO)
   MESSAGE(FATAL_ERROR "You can not use MySql and MariaDB at the same time. Disable one by adding -DENABLE_MYSQLCLIENT=OFF or -DENABLE_MARIADBCLIENT=OFF.")
@@ -255,7 +273,7 @@ list(APPEND install_data ${ADDON_INSTALL_DATA})
 add_library(compileinfo OBJECT ${CORE_BUILD_DIR}/xbmc/CompileInfo.cpp)
 set_target_properties(compileinfo PROPERTIES FOLDER "Build Utilities")
 target_compile_options(compileinfo PRIVATE "${SYSTEM_DEFINES} ${ARCH_DEFINES}")
-add_dependencies(compileinfo fmt)
+add_dependencies(compileinfo fmt::fmt)
 
 if(NOT MSVC)
   target_compile_options(compileinfo PUBLIC ${CORE_COMPILE_OPTIONS})
@@ -392,7 +410,7 @@ else()
 endif()
 
 # testing
-if(CORE_HOST_IS_TARGET AND ENABLE_TESTING)
+if(HOST_CAN_EXECUTE_TARGET AND ENABLE_TESTING)
   find_package(Gtest)
 
   copy_files_from_filelist_to_buildtree(${CMAKE_SOURCE_DIR}/cmake/installdata/test-reference-data.txt NO_INSTALL)

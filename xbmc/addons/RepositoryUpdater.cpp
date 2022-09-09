@@ -8,7 +8,6 @@
 
 #include "RepositoryUpdater.h"
 
-#include "Application.h"
 #include "ServiceBroker.h"
 #include "addons/AddonInstaller.h"
 #include "addons/AddonManager.h"
@@ -65,7 +64,7 @@ void CRepositoryUpdater::OnEvent(const ADDON::AddonEvent& event)
 {
   if (typeid(event) == typeid(ADDON::AddonEvents::Enabled))
   {
-    if (m_addonMgr.HasType(event.id, ADDON_REPOSITORY))
+    if (m_addonMgr.HasType(event.addonId, ADDON_REPOSITORY))
       ScheduleUpdate();
   }
 }

@@ -655,12 +655,6 @@ typedef std::vector< CFileItemPtr >::iterator IVECFILEITEMS;
 typedef std::map<std::string, CFileItemPtr > MAPFILEITEMS;
 
 /*!
-  \brief Iterator for MAPFILEITEMS
-  \sa MAPFILEITEMS
-  */
-typedef std::map<std::string, CFileItemPtr >::iterator IMAPFILEITEMS;
-
-/*!
   \brief Pair for MAPFILEITEMS
   \sa MAPFILEITEMS
   */
@@ -693,11 +687,9 @@ public:
   void AddFront(const CFileItemPtr &pItem, int itemPosition);
   void Remove(CFileItem* pItem);
   void Remove(int iItem);
-  CFileItemPtr Get(int iItem);
-  const CFileItemPtr Get(int iItem) const;
+  CFileItemPtr Get(int iItem) const;
   const VECFILEITEMS& GetList() const { return m_items; }
-  CFileItemPtr Get(const std::string& strPath);
-  const CFileItemPtr Get(const std::string& strPath) const;
+  CFileItemPtr Get(const std::string& strPath) const;
   int Size() const;
   bool IsEmpty() const;
   void Append(const CFileItemList& itemlist);
@@ -808,6 +800,7 @@ public:
 
   VECFILEITEMS::iterator begin() { return m_items.begin(); }
   VECFILEITEMS::iterator end() { return m_items.end(); }
+  VECFILEITEMS::iterator erase(VECFILEITEMS::iterator first, VECFILEITEMS::iterator last);
   VECFILEITEMS::const_iterator begin() const { return m_items.begin(); }
   VECFILEITEMS::const_iterator end() const { return m_items.end(); }
   VECFILEITEMS::const_iterator cbegin() const { return m_items.cbegin(); }

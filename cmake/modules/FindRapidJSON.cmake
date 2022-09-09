@@ -15,18 +15,15 @@ if(ENABLE_INTERNAL_RapidJSON)
 
   SETUP_BUILD_VARS()
 
-  set(RapidJSON_INCLUDE_DIR ${${MODULE}_INCLUDE_DIR})
   set(RapidJSON_VERSION ${${MODULE}_VER})
 
-  # Use custom findpatch to handle windows patch binary if not available
-  include(cmake/modules/FindPatch.cmake)
+  set(patches "${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/001-remove_custom_cxx_flags.patch"
+              "${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/002-cmake-removedocs-examples.patch"
+              "${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/003-win-arm64.patch")
 
-  set(PATCH_COMMAND ${PATCH_EXECUTABLE} -p1 -i ${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/001-remove_custom_cxx_flags.patch
-            COMMAND ${PATCH_EXECUTABLE} -p1 -i ${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/002-cmake-removedocs-examples.patch
-            COMMAND ${PATCH_EXECUTABLE} -p1 -i ${CORE_SOURCE_DIR}/tools/depends/target/rapidjson/003-win-arm64.patch)
+  generate_patchcommand("${patches}")
 
-  set(CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}
-                 -DRAPIDJSON_BUILD_DOC=OFF
+  set(CMAKE_ARGS -DRAPIDJSON_BUILD_DOC=OFF
                  -DRAPIDJSON_BUILD_EXAMPLES=OFF
                  -DRAPIDJSON_BUILD_TESTS=OFF
                  -DRAPIDJSON_BUILD_THIRDPARTY_GTEST=OFF)
@@ -34,6 +31,8 @@ if(ENABLE_INTERNAL_RapidJSON)
   set(BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/include/rapidjson/rapidjson.h)
 
   BUILD_DEP_TARGET()
+
+  set(RapidJSON_INCLUDE_DIR ${${MODULE}_INCLUDE_DIR})
 
   # Add dependency to libkodi to build
   set_property(GLOBAL APPEND PROPERTY INTERNAL_DEPS_PROP rapidjson)

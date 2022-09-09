@@ -35,12 +35,6 @@ namespace PVR
   class CPVRClient;
   class CPVREpgInfoTag;
 
-  enum EpgDateType
-  {
-    EPG_FIRST_DATE = 0,
-    EPG_LAST_DATE = 1
-  };
-
   enum RenumberMode
   {
     NORMAL = 0,
@@ -368,18 +362,6 @@ namespace PVR
     virtual bool CreateChannelEpgs(bool bForce = false);
 
     /*!
-     * @brief Get the start time of the first entry.
-     * @return The start time.
-     */
-    CDateTime GetFirstEPGDate() const;
-
-    /*!
-     * @brief Get the end time of the last entry.
-     * @return The end time.
-     */
-    CDateTime GetLastEPGDate() const;
-
-    /*!
      * @brief Update a channel group member with given data.
      * @param storageId The storage id of the channel.
      * @param strChannelName The channel name to set.
@@ -434,11 +416,12 @@ namespace PVR
     bool HasValidDataForClient(int iClientId) const;
 
     /*!
-     * @brief Check, whether data for all active pvr clients are currently valid. For instance, data
+     * @brief Check, whether data for given pvr clients are currently valid. For instance, data
      * can be invalid because the client's backend was offline when data was last queried.
+     * @param clients The clients to check. Check all active clients if vector is empty.
      * @return True, if data is currently valid, false otherwise.
      */
-    bool HasValidDataForAllClients() const;
+    bool HasValidDataForClients(const std::vector<std::shared_ptr<CPVRClient>>& clients) const;
 
     /*!
      * @brief Update the channel numbers according to the all channels group and publish event.
@@ -549,8 +532,6 @@ namespace PVR
         const std::vector<std::shared_ptr<CPVRChannelGroupMember>>& groupMembers);
 
     void OnSettingChanged();
-
-    CDateTime GetEPGDate(EpgDateType epgDateType) const;
 
     std::shared_ptr<CPVRChannelGroup> m_allChannelsGroup;
     CPVRChannelsPath m_path;

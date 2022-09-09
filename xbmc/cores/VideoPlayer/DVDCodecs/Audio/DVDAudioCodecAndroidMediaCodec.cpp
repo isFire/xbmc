@@ -29,6 +29,7 @@
 #include "platform/android/activity/AndroidFeatures.h"
 
 #include <cassert>
+#include <stdexcept>
 
 #include <androidjni/ByteBuffer.h>
 #include <androidjni/MediaCodec.h>
@@ -199,12 +200,12 @@ bool CDVDAudioCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   {
     //StereoDownmixAllowed is true if the user has selected 2.0 Audio channels in settings
     bool stereoDownmixAllowed = CServiceBroker::GetActiveAE()->HasStereoAudioChannelCount();
-    int num_codecs = CJNIMediaCodecList::getCodecCount();
+    const std::vector<CJNIMediaCodecInfo> codecInfos =
+        CJNIMediaCodecList(CJNIMediaCodecList::REGULAR_CODECS).getCodecInfos();
     std::vector<std::string> mimeTypes;
 
-    for (int i = 0; i < num_codecs; i++)
+    for (const CJNIMediaCodecInfo& codec_info : codecInfos)
     {
-      CJNIMediaCodecInfo codec_info = CJNIMediaCodecList::getCodecInfoAt(i);
       if (codec_info.isEncoder())
         continue;
 
@@ -401,14 +402,28 @@ bool CDVDAudioCodecAndroidMediaCodec::AddData(const DemuxPacket &packet)
       CJNIMediaCodecCryptoInfo *cryptoInfo(0);
       if (!!m_crypto->get_raw() && packet.cryptoInfo)
       {
+        if (CJNIBase::GetSDKVersion() < 25 &&
+            packet.cryptoInfo->mode == CJNIMediaCodec::CRYPTO_MODE_AES_CBC)
+        {
+          CLog::LogF(LOGERROR, "Device API does not support CBCS decryption");
+          return false;
+        }
         cryptoInfo = new CJNIMediaCodecCryptoInfo();
         cryptoInfo->set(
-          packet.cryptoInfo->numSubSamples,
-          std::vector<int>(packet.cryptoInfo->clearBytes, packet.cryptoInfo->clearBytes + packet.cryptoInfo->numSubSamples),
-          std::vector<int>(packet.cryptoInfo->cipherBytes, packet.cryptoInfo->cipherBytes + packet.cryptoInfo->numSubSamples),
-          std::vector<char>(packet.cryptoInfo->kid, packet.cryptoInfo->kid + 16),
-          std::vector<char>(packet.cryptoInfo->iv, packet.cryptoInfo->iv + 16),
-          CJNIMediaCodec::CRYPTO_MODE_AES_CTR);
+            packet.cryptoInfo->numSubSamples,
+            std::vector<int>(packet.cryptoInfo->clearBytes,
+                             packet.cryptoInfo->clearBytes + packet.cryptoInfo->numSubSamples),
+            std::vector<int>(packet.cryptoInfo->cipherBytes,
+                             packet.cryptoInfo->cipherBytes + packet.cryptoInfo->numSubSamples),
+            std::vector<char>(std::begin(packet.cryptoInfo->kid), std::end(packet.cryptoInfo->kid)),
+            std::vector<char>(std::begin(packet.cryptoInfo->iv), std::end(packet.cryptoInfo->iv)),
+            packet.cryptoInfo->mode == CJNIMediaCodec::CRYPTO_MODE_AES_CBC
+                ? CJNIMediaCodec::CRYPTO_MODE_AES_CBC
+                : CJNIMediaCodec::CRYPTO_MODE_AES_CTR);
+
+        CJNIMediaCodecCryptoInfoPattern cryptoInfoPattern(packet.cryptoInfo->cryptBlocks,
+                                                          packet.cryptoInfo->skipBlocks);
+        cryptoInfo->setPattern(cryptoInfoPattern);
       }
 
       int flags = 0;
@@ -504,8 +519,8 @@ bool CDVDAudioCodecAndroidMediaCodec::ConfigureMediaCodec(void)
 {
   // setup a MediaFormat to match the audio content,
   // used by codec during configure
-  CJNIMediaFormat mediaformat(CJNIMediaFormat::createAudioFormat(
-    m_mime.c_str(), m_hints.samplerate, m_hints.channels));
+  CJNIMediaFormat mediaformat(
+      CJNIMediaFormat::createAudioFormat(m_mime, m_hints.samplerate, m_hints.channels));
 
   if (!m_decryptCodec)
   {
@@ -671,6 +686,8 @@ int CDVDAudioCodecAndroidMediaCodec::GetData(uint8_t** dst)
       {
         m_bufferSize = size;
         m_buffer = (uint8_t*)realloc(m_buffer, m_bufferSize);
+        if (m_buffer == nullptr)
+          throw std::runtime_error("Failed to realloc memory, insufficient memory available");
       }
 
       memcpy(m_buffer, src_ptr, size);

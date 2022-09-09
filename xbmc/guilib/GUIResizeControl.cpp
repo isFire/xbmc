@@ -10,10 +10,9 @@
 
 #include "GUIMessage.h"
 #include "input/Key.h"
-#include "utils/TimeUtils.h"
+#include "input/mouse/MouseStat.h"
 
-// time to reset accelerated cursors (digital movement)
-#define MOVE_TIME_OUT 500L
+using namespace UTILS;
 
 CGUIResizeControl::CGUIResizeControl(int parentID,
                                      int controlID,
@@ -22,20 +21,17 @@ CGUIResizeControl::CGUIResizeControl(int parentID,
                                      float width,
                                      float height,
                                      const CTextureInfo& textureFocus,
-                                     const CTextureInfo& textureNoFocus)
+                                     const CTextureInfo& textureNoFocus,
+                                     UTILS::MOVING_SPEED::MapEventConfig& movingSpeedCfg)
   : CGUIControl(parentID, controlID, posX, posY, width, height),
     m_imgFocus(CGUITexture::CreateTexture(posX, posY, width, height, textureFocus)),
     m_imgNoFocus(CGUITexture::CreateTexture(posX, posY, width, height, textureNoFocus))
 {
   m_frameCounter = 0;
-  m_lastMoveTime = 0;
-  m_fSpeed = 1.0;
+  m_movingSpeed.AddEventMapConfig(movingSpeedCfg);
   m_fAnalogSpeed = 2.0f; //! @todo implement correct analog speed
-  m_fAcceleration = 0.2f; //! @todo implement correct computation of acceleration
-  m_fMaxSpeed = 10.0;  //! @todo implement correct computation of maxspeed
   ControlType = GUICONTROL_RESIZE;
   SetLimits(0, 0, 720, 576); // defaults
-  m_nDirection = DIRECTION_NONE;
 }
 
 CGUIResizeControl::CGUIResizeControl(const CGUIResizeControl& control)
@@ -43,12 +39,8 @@ CGUIResizeControl::CGUIResizeControl(const CGUIResizeControl& control)
     m_imgFocus(control.m_imgFocus->Clone()),
     m_imgNoFocus(control.m_imgNoFocus->Clone()),
     m_frameCounter(control.m_frameCounter),
-    m_lastMoveTime(control.m_lastMoveTime),
-    m_nDirection(control.m_nDirection),
-    m_fSpeed(control.m_fSpeed),
+    m_movingSpeed(control.m_movingSpeed),
     m_fAnalogSpeed(control.m_fAnalogSpeed),
-    m_fMaxSpeed(control.m_fMaxSpeed),
-    m_fAcceleration(control.m_fAcceleration),
     m_x1(control.m_x1),
     m_x2(control.m_x2),
     m_y1(control.m_y1),
@@ -120,38 +112,34 @@ bool CGUIResizeControl::OnAction(const CAction &action)
 
 void CGUIResizeControl::OnUp()
 {
-  UpdateSpeed(DIRECTION_UP);
-  Resize(0, -m_fSpeed);
+  Resize(0, -m_movingSpeed.GetUpdatedDistance(MOVING_SPEED::EventType::UP));
 }
 
 void CGUIResizeControl::OnDown()
 {
-  UpdateSpeed(DIRECTION_DOWN);
-  Resize(0, m_fSpeed);
+  Resize(0, m_movingSpeed.GetUpdatedDistance(MOVING_SPEED::EventType::DOWN));
 }
 
 void CGUIResizeControl::OnLeft()
 {
-  UpdateSpeed(DIRECTION_LEFT);
-  Resize(-m_fSpeed, 0);
+  Resize(-m_movingSpeed.GetUpdatedDistance(MOVING_SPEED::EventType::LEFT), 0);
 }
 
 void CGUIResizeControl::OnRight()
 {
-  UpdateSpeed(DIRECTION_RIGHT);
-  Resize(m_fSpeed, 0);
+  Resize(m_movingSpeed.GetUpdatedDistance(MOVING_SPEED::EventType::RIGHT), 0);
 }
 
 EVENT_RESULT CGUIResizeControl::OnMouseEvent(const CPoint &point, const CMouseEvent &event)
 {
-  if (event.m_id == ACTION_MOUSE_DRAG)
+  if (event.m_id == ACTION_MOUSE_DRAG || event.m_id == ACTION_MOUSE_DRAG_END)
   {
-    if (event.m_state == 1)
+    if (static_cast<HoldAction>(event.m_state) == HoldAction::DRAG)
     { // grab exclusive access
       CGUIMessage msg(GUI_MSG_EXCLUSIVE_MOUSE, GetID(), GetParentID());
       SendWindowMessage(msg);
     }
-    else if (event.m_state == 3)
+    else if (static_cast<HoldAction>(event.m_state) == HoldAction::DRAG_END)
     { // release exclusive access
       CGUIMessage msg(GUI_MSG_EXCLUSIVE_MOUSE, 0, GetParentID());
       SendWindowMessage(msg);
@@ -160,26 +148,6 @@ EVENT_RESULT CGUIResizeControl::OnMouseEvent(const CPoint &point, const CMouseEv
     return EVENT_RESULT_HANDLED;
   }
   return EVENT_RESULT_UNHANDLED;
-}
-
-void CGUIResizeControl::UpdateSpeed(int nDirection)
-{
-  if (CTimeUtils::GetFrameTime() - m_lastMoveTime > MOVE_TIME_OUT)
-  {
-    m_fSpeed = 1;
-    m_nDirection = DIRECTION_NONE;
-  }
-  m_lastMoveTime = CTimeUtils::GetFrameTime();
-  if (nDirection == m_nDirection)
-  { // accelerate
-    m_fSpeed += m_fAcceleration;
-    if (m_fSpeed > m_fMaxSpeed) m_fSpeed = m_fMaxSpeed;
-  }
-  else
-  { // reset direction and speed
-    m_fSpeed = 1;
-    m_nDirection = nDirection;
-  }
 }
 
 void CGUIResizeControl::AllocResources()

@@ -485,9 +485,9 @@ bool CWinSystemWin32::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool 
 
   if (m_state == WINDOW_STATE_WINDOWED)
   {
-    WINDOWINFO wi;
+    WINDOWINFO wi = {};
     wi.cbSize = sizeof(WINDOWINFO);
-    if (GetWindowInfo(m_hWnd, &wi))
+    if (GetWindowInfo(m_hWnd, &wi) && wi.rcClient.top > 0)
     {
       m_nLeft = wi.rcClient.left;
       m_nTop = wi.rcClient.top;
@@ -974,7 +974,7 @@ void CWinSystemWin32::UpdateResolutions()
     res.fPixelRatio = 1.0f;
     res.iScreenWidth = res.iWidth;
     res.iScreenHeight = res.iHeight;
-    res.iSubtitles = (int)(0.965 * res.iHeight);
+    res.iSubtitles = res.iHeight;
     res.strMode = StringUtils::Format("{}: {}x{} @ {:.2f}Hz", monitorName, res.iWidth, res.iHeight,
                                       res.fRefreshRate);
     GetGfxContext().ResetOverscan(res);

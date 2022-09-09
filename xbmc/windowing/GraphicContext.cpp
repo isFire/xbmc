@@ -382,7 +382,7 @@ bool CGraphicContext::IsValidResolution(RESOLUTION res)
 // call SetVideoResolutionInternal and ensure its done from mainthread
 void CGraphicContext::SetVideoResolution(RESOLUTION res, bool forceUpdate)
 {
-  if (g_application.IsCurrentThread())
+  if (CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     SetVideoResolutionInternal(res, forceUpdate);
   }
@@ -570,7 +570,7 @@ void CGraphicContext::ResetScreenParameters(RESOLUTION res)
 {
   RESOLUTION_INFO& info = CDisplaySettings::GetInstance().GetResolutionInfo(res);
 
-  info.iSubtitles = static_cast<int>(0.965 * info.iHeight);
+  info.iSubtitles = info.iHeight;
   info.fPixelRatio = 1.0f;
   info.iScreenWidth = info.iWidth;
   info.iScreenHeight = info.iHeight;
@@ -902,6 +902,11 @@ UTILS::COLOR::Color CGraphicContext::MergeAlpha(UTILS::COLOR::Color color) const
   UTILS::COLOR::Color alpha = m_finalTransform.matrix.TransformAlpha((color >> 24) & 0xff);
   if (alpha > 255) alpha = 255;
   return ((alpha << 24) & 0xff000000) | (color & 0xffffff);
+}
+
+UTILS::COLOR::Color CGraphicContext::MergeColor(UTILS::COLOR::Color color) const
+{
+  return m_finalTransform.matrix.TransformColor(color);
 }
 
 int CGraphicContext::GetWidth() const

@@ -48,7 +48,7 @@ protected:
   virtual void UpdateRenderBuffers(int queued, int discard, int free) = 0;
   virtual void UpdateGuiRender(bool gui) = 0;
   virtual void UpdateVideoRender(bool video) = 0;
-  virtual CVideoSettings GetVideoSettings() = 0;
+  virtual CVideoSettings GetVideoSettings() const = 0;
 };
 
 class CRenderManager
@@ -74,6 +74,14 @@ public:
   bool IsConfigured() const;
   void ToggleDebug();
   void ToggleDebugVideo();
+
+  /*!
+   * \brief Set the subtitle vertical position,
+   * it depends on current screen resolution
+   * \param value The subtitle position in pixels
+   * \param save If true, the value will be saved to resolution info
+   */
+  void SetSubtitleVerticalPosition(const int value, bool save);
 
   unsigned int AllocRenderCapture();
   void ReleaseRenderCapture(unsigned int captureId);
@@ -114,7 +122,7 @@ public:
   void SetDelay(int delay) { m_videoDelay = delay; }
   int GetDelay() { return m_videoDelay; }
 
-  void SetVideoSettings(CVideoSettings settings);
+  void SetVideoSettings(const CVideoSettings& settings);
 
 protected:
 

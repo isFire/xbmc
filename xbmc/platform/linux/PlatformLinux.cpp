@@ -8,7 +8,16 @@
 
 #include "PlatformLinux.h"
 
+#if defined(HAS_ALSA)
+#include "cores/AudioEngine/Sinks/alsa/ALSADeviceMonitor.h"
+#include "cores/AudioEngine/Sinks/alsa/ALSAHControlMonitor.h"
+#endif
+
 #include "utils/StringUtils.h"
+
+#if defined(HAS_ALSA)
+#include "platform/linux/FDEventMonitor.h"
+#endif
 
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
 
@@ -119,5 +128,36 @@ bool CPlatformLinux::InitStageOne()
 
   m_lirc.reset(OPTIONALS::LircRegister());
 
+#if defined(HAS_ALSA)
+  RegisterService(std::make_shared<CFDEventMonitor>());
+#if defined(HAVE_LIBUDEV)
+  RegisterService(std::make_shared<CALSADeviceMonitor>());
+#endif
+#if !defined(HAVE_X11)
+  RegisterService(std::make_shared<CALSAHControlMonitor>());
+#endif
+#endif // HAS_ALSA
   return true;
+}
+
+void CPlatformLinux::DeinitStageOne()
+{
+#if defined(HAS_ALSA)
+#if !defined(HAVE_X11)
+  DeregisterService(typeid(CALSAHControlMonitor));
+#endif
+#if defined(HAVE_LIBUDEV)
+  DeregisterService(typeid(CALSADeviceMonitor));
+#endif
+  DeregisterService(typeid(CFDEventMonitor));
+#endif // HAS_ALSA
+}
+
+bool CPlatformLinux::IsConfigureAddonsAtStartupEnabled()
+{
+#if defined(ADDONS_CONFIGURE_AT_STARTUP)
+  return true;
+#else
+  return false;
+#endif
 }

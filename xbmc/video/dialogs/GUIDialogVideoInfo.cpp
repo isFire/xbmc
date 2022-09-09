@@ -8,7 +8,6 @@
 
 #include "GUIDialogVideoInfo.h"
 
-#include "Application.h"
 #include "ContextMenuManager.h"
 #include "FileItem.h"
 #include "GUIPassword.h"
@@ -740,6 +739,8 @@ void CGUIDialogVideoInfo::Play(bool resume)
       Open();
       return;
     }
+    m_movieItem->SetProperty("playlist_type_hint", PLAYLIST_VIDEO);
+
     pWindow->PlayMovie(m_movieItem.get());
   }
 }
@@ -1511,7 +1512,7 @@ bool CGUIDialogVideoInfo::DeleteVideoItemFromDatabase(const CFileItemPtr &item, 
 
   int heading = -1;
   VIDEODB_CONTENT_TYPE type = static_cast<VIDEODB_CONTENT_TYPE>(item->GetVideoContentType());
-  std::string& subtype = item->GetVideoInfoTag()->m_type;
+  const std::string& subtype = item->GetVideoInfoTag()->m_type;
   if (subtype != "tag")
   {
     switch (type)

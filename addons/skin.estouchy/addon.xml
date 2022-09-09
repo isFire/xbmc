@@ -47,7 +47,7 @@
 		<summary lang="es_MX">Máscara para dispositivos con pantalla táctil</summary>
 		<summary lang="et_EE">Puutetundlike seadmete rüü</summary>
 		<summary lang="eu_ES">Ukipen-pantaila duten gailuentzako azala</summary>
-		<summary lang="fi_FI">Ulkoasu kosketusnäyttölaitteille</summary>
+		<summary lang="fi_FI">Ulkoasu kosketusnäytöllisille laitteille</summary>
 		<summary lang="fr_CA">Habillage pour appareils à écran tactile</summary>
 		<summary lang="fr_FR">Habillage pour les appareils à écran tactile</summary>
 		<summary lang="gl_ES">Pel para dispositivos táctiles</summary>
@@ -96,7 +96,7 @@
 		<description lang="es_MX">Máscara diseñada para ser usada en dispositivos de pantalla táctil como tabletas y teléfonos inteligentes</description>
 		<description lang="et_EE">Rüü on mõeldud kasutamiseks puutetundlike seadmetega nagu tahvelarvutid ja nutitelefonid.</description>
 		<description lang="eu_ES">Ukipen-pantaila duten gailuetan erabiltzeko diseinatutako azala</description>
-		<description lang="fi_FI">Ulkoasu on suunniteltu käytettäväksi kosketusnäyttölaitteissa, esimerkiksi tableteissa ja älypuhelimissa</description>
+		<description lang="fi_FI">Ulkoasu, joka on suunniteltu käytettäväksi kosketusnäytöllisillä laitteilla, kuten tableteilla ja älypuhelimilla</description>
 		<description lang="fr_CA">Habillage conçu pour être utilisé sur les appareils à écran tactile comme les tablettes et les téléphones intelligents</description>
 		<description lang="fr_FR">Habillage conçu pour les appareils à écran tactile comme les tablettes et les téléphones</description>
 		<description lang="gl_ES">Pel deseñada para se empregar en dispositivos táctiles como tabletas e móbiles</description>
@@ -124,7 +124,7 @@
 		<description lang="szl">Skōra dlŏ maszin ze tykowym ekranym, jak tablety i smartfōny.</description>
 		<description lang="th_TH">หน้าตาที่ออกแบบมาเพื่อใช้งานบนอุปกรณ์หน้าจอสัมผัส เช่น แท็บเล็ตและสมาร์ทโฟน</description>
 		<description lang="tr_TR">Bu dış görünüm tabletler ve akıllı telefonlar gibi dokunmatik ekranlı aygıtlarda kullanılmak üzere tasarlandı</description>
-		<description lang="uk_UA">Ця обкладинка призначена для пристроїв із сенсорним екраном, наприклад планшетів чи смартфонів.</description>
+		<description lang="uk_UA">Ця обкладинка призначена для пристроїв із сенсорним екраном, наприклад планшетів чи смартфонів</description>
 		<description lang="vi_VN">Giao diện được thiết kế để sử dụng trên thiết bị màn hình cảm ứng như máy tính bảng và điện thoại thông minh</description>
 		<description lang="zh_CN">为触屏设备如平板电脑和智能手机而设计的皮肤</description>
 		<description lang="zh_TW">本佈景主題專為平板及手機等具有觸控螢幕的裝置而設計</description>

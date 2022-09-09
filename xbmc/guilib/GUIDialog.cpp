@@ -8,7 +8,6 @@
 
 #include "GUIDialog.h"
 
-#include "Application.h"
 #include "GUIComponent.h"
 #include "GUIControlFactory.h"
 #include "GUILabelControl.h"
@@ -127,7 +126,7 @@ void CGUIDialog::UpdateVisibility()
 {
   if (m_visibleCondition)
   {
-    if (m_visibleCondition->Get())
+    if (m_visibleCondition->Get(INFO::DEFAULT_CONTEXT))
       Open();
     else
       Close();
@@ -191,7 +190,7 @@ void CGUIDialog::Open(const std::string &param /* = "" */)
 
 void CGUIDialog::Open(bool bProcessRenderLoop, const std::string& param /* = "" */)
 {
-  if (!g_application.IsCurrentThread())
+  if (!CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     // make sure graphics lock is not held
     CSingleExit leaveIt(CServiceBroker::GetWinSystem()->GetGfxContext());

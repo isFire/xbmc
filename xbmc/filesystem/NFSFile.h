@@ -18,12 +18,7 @@
 #include <list>
 #include <map>
 
-#if defined(TARGET_WINDOWS)
-struct __stat64;
-#define NFSSTAT struct __stat64
-#else
-#define NFSSTAT struct stat
-#endif
+struct nfs_stat_64;
 
 class CNfsConnection : public CCriticalSection
 {
@@ -31,7 +26,7 @@ public:
   struct keepAliveStruct
   {
     std::string exportPath;
-    uint64_t refreshCounter;
+    std::chrono::time_point<std::chrono::steady_clock> refreshTime;
   };
   typedef std::map<struct nfsfh  *, struct keepAliveStruct> tFileKeepAliveMap;
 
@@ -57,7 +52,7 @@ public:
 
   //special stat which uses its own context
   //needed for getting intervolume symlinks to work
-  int stat(const CURL &url, NFSSTAT *statbuff);
+  int stat(const CURL& url, nfs_stat_64* statbuff);
 
   void AddActiveConnection();
   void AddIdleConnection();
@@ -74,14 +69,21 @@ public:
   const std::string GetContextMapId() const {return m_hostName + m_exportPath;}
 
 private:
+  enum class ContextStatus
+  {
+    INVALID,
+    NEW,
+    CACHED
+  };
+
   struct nfs_context *m_pNfsContext;//current nfs context
   std::string m_exportPath;//current connected export path
   std::string m_hostName;//current connected host
   std::string m_resolvedHostName;//current connected host - as ip
   uint64_t m_readChunkSize = 0;//current read chunksize of connected server
   uint64_t m_writeChunkSize = 0;//current write chunksize of connected server
-  int m_OpenConnections = 0;//number of open connections
-  unsigned int m_IdleTimeout = 0;//timeout for idle connection close and dyunload
+  int m_OpenConnections = 0; //number of open connections
+  std::chrono::time_point<std::chrono::steady_clock> m_IdleTimeout;
   tFileKeepAliveMap m_KeepAliveTimeouts;//mapping filehandles to its idle timeout
   tOpenContextMap m_openContextMap;//unique map for tracking all open contexts
   std::chrono::time_point<std::chrono::steady_clock>
@@ -92,7 +94,9 @@ private:
 
   void clearMembers();
   struct nfs_context *getContextFromMap(const std::string &exportname, bool forceCacheHit = false);
-  int getContextForExport(const std::string &exportname);//get context for given export and add to open contexts map - sets m_pNfsContext (my return a already mounted cached context)
+
+  // get context for given export and add to open contexts map - sets m_pNfsContext (may return an already mounted cached context)
+  ContextStatus getContextForExport(const std::string& exportname);
   void destroyOpenContexts();
   void destroyContext(const std::string &exportName);
   void resolveHost(const CURL &url);//resolve hostname by dnslookup

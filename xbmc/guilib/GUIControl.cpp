@@ -125,6 +125,15 @@ void CGUIControl::DoProcess(unsigned int currentTime, CDirtyRegionList &dirtyreg
   if (Animate(currentTime))
     MarkDirtyRegion();
 
+  // if the control changed culling state from true to false, mark it
+  const bool culled = m_transform.alpha <= 0.01f;
+  if (m_isCulled != culled)
+  {
+    m_isCulled = false;
+    MarkDirtyRegion();
+  }
+  m_isCulled = culled;
+
   if (IsVisible())
   {
     m_cachedTransform = CServiceBroker::GetWinSystem()->GetGfxContext().AddTransform(m_transform);
@@ -168,7 +177,7 @@ void CGUIControl::Process(unsigned int currentTime, CDirtyRegionList &dirtyregio
 // 3. reset the animation transform
 void CGUIControl::DoRender()
 {
-  if (IsVisible())
+  if (IsVisible() && !m_isCulled)
   {
     bool hasStereo =
         m_stereo != 0.0f &&
@@ -402,7 +411,8 @@ bool CGUIControl::CanFocus() const
 
 bool CGUIControl::IsVisible() const
 {
-  if (m_forceHidden) return false;
+  if (m_forceHidden)
+    return false;
   return m_visible == VISIBLE;
 }
 
@@ -473,6 +483,9 @@ float CGUIControl::GetHeight() const
 
 void CGUIControl::MarkDirtyRegion(const unsigned int dirtyState)
 {
+  // if the control is culled, bail
+  if (dirtyState == DIRTY_STATE_CONTROL && m_isCulled)
+    return;
   if (!m_controlDirtyState && m_parentControl)
     m_parentControl->MarkDirtyRegion(DIRTY_STATE_CHILD);
 
@@ -528,7 +541,7 @@ void CGUIControl::SetVisible(bool bVisible, bool setVisState)
      //!       otherwise we just set m_forceHidden
     GUIVISIBLE visible;
     if (m_visibleCondition)
-      visible = m_visibleCondition->Get() ? VISIBLE : HIDDEN;
+      visible = m_visibleCondition->Get(INFO::DEFAULT_CONTEXT) ? VISIBLE : HIDDEN;
     else
       visible = VISIBLE;
     if (visible != m_visible)
@@ -593,7 +606,7 @@ void CGUIControl::UpdateVisibility(const CGUIListItem *item)
   if (m_visibleCondition)
   {
     bool bWasVisible = m_visibleFromSkinCondition;
-    m_visibleFromSkinCondition = m_visibleCondition->Get(item);
+    m_visibleFromSkinCondition = m_visibleCondition->Get(INFO::DEFAULT_CONTEXT, item);
     if (!bWasVisible && m_visibleFromSkinCondition)
     { // automatic change of visibility - queue the in effect
       //    CLog::Log(LOGDEBUG, "Visibility changed to visible for control id {}", m_controlID);
@@ -616,12 +629,12 @@ void CGUIControl::UpdateVisibility(const CGUIListItem *item)
   // this may need to be reviewed at a later date
   bool enabled = m_enabled;
   if (m_enableCondition)
-    m_enabled = m_enableCondition->Get(item);
+    m_enabled = m_enableCondition->Get(INFO::DEFAULT_CONTEXT, item);
 
   if (m_enabled != enabled)
     MarkDirtyRegion();
 
-  m_allowHiddenFocus.Update(item);
+  m_allowHiddenFocus.Update(INFO::DEFAULT_CONTEXT, item);
   if (UpdateColors(item))
     MarkDirtyRegion();
   // and finally, update our control information (if not pushed)
@@ -638,7 +651,7 @@ void CGUIControl::SetInitialVisibility()
 {
   if (m_visibleCondition)
   {
-    m_visibleFromSkinCondition = m_visibleCondition->Get();
+    m_visibleFromSkinCondition = m_visibleCondition->Get(INFO::DEFAULT_CONTEXT);
     m_visible = m_visibleFromSkinCondition ? VISIBLE : HIDDEN;
     //  CLog::Log(LOGDEBUG, "Set initial visibility for control {}: {}", m_controlID, m_visible == VISIBLE ? "visible" : "hidden");
   }
@@ -654,8 +667,8 @@ void CGUIControl::SetInitialVisibility()
   // and check for conditional enabling - note this overrides SetEnabled() from the code currently
   // this may need to be reviewed at a later date
   if (m_enableCondition)
-    m_enabled = m_enableCondition->Get();
-  m_allowHiddenFocus.Update();
+    m_enabled = m_enableCondition->Get(INFO::DEFAULT_CONTEXT);
+  m_allowHiddenFocus.Update(INFO::DEFAULT_CONTEXT);
   UpdateColors(nullptr);
 
   MarkDirtyRegion();

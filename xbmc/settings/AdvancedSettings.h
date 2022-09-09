@@ -24,7 +24,6 @@
 #define CACHE_BUFFER_MODE_NONE 3
 #define CACHE_BUFFER_MODE_NETWORK 4
 
-class CAppParamParser;
 class CProfileManager;
 class CSettingsManager;
 class CVariant;
@@ -115,7 +114,7 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
 
     void OnSettingChanged(const std::shared_ptr<const CSetting>& setting) override;
 
-    void Initialize(const CAppParamParser &params, CSettingsManager& settingsMgr);
+    void Initialize(CSettingsManager& settingsMgr);
     void Uninitialize(CSettingsManager& settingsMgr);
     bool Initialized() const { return m_initialized; }
     void AddSettingsFile(const std::string &filename);
@@ -163,7 +162,6 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
 
     int   m_videoVDPAUScaling;
     float m_videoNonLinStretchRatio;
-    bool  m_videoEnableHighQualityHwScalers;
     float m_videoAutoScaleMaxFps;
     std::vector<RefreshOverride> m_videoAdjustRefreshOverrides;
     std::vector<RefreshVideoLatency> m_videoRefreshLatency;
@@ -230,6 +228,8 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
     unsigned int m_fanartRes; ///< \brief the maximal resolution to cache fanart at (assumes 16x9)
     unsigned int m_imageRes;  ///< \brief the maximal resolution to cache images at (assumes 16x9)
     CPictureScalingAlgorithm::Algorithm m_imageScalingAlgorithm;
+    unsigned int
+        m_imageQualityJpeg; ///< \brief the stored jpeg quality the lower the better (default: 4)
 
     int m_sambaclienttimeout;
     std::string m_sambadoscodepage;
@@ -375,11 +375,6 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
     std::string m_stereoscopicregex_3d;
     std::string m_stereoscopicregex_sbs;
     std::string m_stereoscopicregex_tab;
-
-    /*! \brief Change the default vertical margin of the subtitle,
-        in order to be applied to applied to all types of subtitle position.
-    */
-    int m_videoSubtitleVerticalMargin;
 
     bool m_openGlDebugging;
 

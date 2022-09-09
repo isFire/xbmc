@@ -28,6 +28,7 @@
 #include "utils/Variant.h"
 #include "utils/log.h"
 
+#include <charconv>
 #include <cmath>
 
 using namespace KODI::GUILIB::GUIINFO;
@@ -121,26 +122,6 @@ std::string CPlayerGUIInfo::GetSeekTime(TIME_FORMAT format) const
   return StringUtils::SecondsToTimeString(iSeekTimeCode, format);
 }
 
-void CPlayerGUIInfo::SetDisplayAfterSeek(unsigned int timeOut, int seekOffset)
-{
-  if (timeOut > 0)
-  {
-    m_AfterSeekTimeout = CTimeUtils::GetFrameTime() +  timeOut;
-    if (seekOffset)
-      m_seekOffset = seekOffset;
-  }
-  else
-    m_AfterSeekTimeout = 0;
-}
-
-bool CPlayerGUIInfo::GetDisplayAfterSeek() const
-{
-  if (CTimeUtils::GetFrameTime() < m_AfterSeekTimeout)
-    return true;
-  m_seekOffset = 0;
-  return false;
-}
-
 void CPlayerGUIInfo::SetShowInfo(bool showinfo)
 {
   m_playerShowInfo = showinfo;
@@ -175,10 +156,12 @@ bool CPlayerGUIInfo::GetLabel(std::string& value, const CFileItem *item, int con
     ///////////////////////////////////////////////////////////////////////////////////////////////
     case PLAYER_SEEKOFFSET:
     {
-      std::string seekOffset = StringUtils::SecondsToTimeString(std::abs(m_seekOffset / 1000), static_cast<TIME_FORMAT>(info.GetData1()));
-      if (m_seekOffset < 0)
+      int lastSeekOffset = CServiceBroker::GetDataCacheCore().GetSeekOffSet();
+      std::string seekOffset = StringUtils::SecondsToTimeString(
+          std::abs(lastSeekOffset / 1000), static_cast<TIME_FORMAT>(info.GetData1()));
+      if (lastSeekOffset < 0)
         value = "-" + seekOffset;
-      else if (m_seekOffset > 0)
+      else if (lastSeekOffset > 0)
         value = "+" + seekOffset;
       return true;
     }
@@ -417,14 +400,12 @@ bool CPlayerGUIInfo::GetBool(bool& value, const CGUIListItem *gitem, int context
     case PLAYER_SHOWINFO:
       value = m_playerShowInfo;
       return true;
-    case PLAYER_DISPLAY_AFTER_SEEK:
-      value = GetDisplayAfterSeek();
-      return true;
     case PLAYER_SHOWTIME:
       value = m_playerShowTime;
       return true;
     case PLAYER_MUTED:
-      value = (g_application.IsMuted() || g_application.GetVolumeRatio() <= VOLUME_MINIMUM);
+      value = (g_application.IsMuted() ||
+               g_application.GetVolumeRatio() <= CApplicationVolumeHandling::VOLUME_MINIMUM);
       return true;
     case PLAYER_HAS_MEDIA:
       value = g_application.GetAppPlayer().IsPlaying();
@@ -507,6 +488,21 @@ bool CPlayerGUIInfo::GetBool(bool& value, const CGUIListItem *gitem, int context
     case PLAYER_SEEKING:
       value = g_application.GetAppPlayer().GetSeekHandler().InProgress();
       return true;
+    case PLAYER_HASPERFORMEDSEEK:
+    {
+      int requestedLastSecondInterval{0};
+      std::from_chars_result result =
+          std::from_chars(info.GetData3().data(), info.GetData3().data() + info.GetData3().size(),
+                          requestedLastSecondInterval);
+      if (result.ec == std::errc::invalid_argument)
+      {
+        value = false;
+        return false;
+      }
+
+      value = CServiceBroker::GetDataCacheCore().HasPerformedSeek(requestedLastSecondInterval);
+      return true;
+    }
     case PLAYER_PASSTHROUGH:
       value = g_application.GetAppPlayer().IsPassthrough();
       return true;

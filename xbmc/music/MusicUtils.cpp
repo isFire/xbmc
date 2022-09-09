@@ -62,8 +62,9 @@ namespace MUSIC_UTILS
         if (pSongItem->HasProperty("artistid"))
         {
           // Check artistid property when we have it
-          for (CVariant::const_iterator_array varid = pSongItem->GetProperty("artistid").begin_array();
-            varid != pSongItem->GetProperty("artistid").end_array(); varid++)
+          for (CVariant::const_iterator_array varid =
+                   pSongItem->GetProperty("artistid").begin_array();
+               varid != pSongItem->GetProperty("artistid").end_array(); ++varid)
           {
             int idArtist = static_cast<int>(varid->asInteger());
             result = (itemID == idArtist);
@@ -110,7 +111,7 @@ namespace MUSIC_UTILS
       loaded when the playlist is shown.
       */
       bool clearcache(false);
-      CPlayList& playlist = CServiceBroker::GetPlaylistPlayer().GetPlaylist(PLAYLIST_MUSIC);
+      const CPlayList& playlist = CServiceBroker::GetPlaylistPlayer().GetPlaylist(PLAYLIST_MUSIC);
       for (int i = 0; i < playlist.size(); ++i)
       {
         CFileItemPtr songitem = playlist[i];
@@ -235,7 +236,7 @@ namespace MUSIC_UTILS
 
   bool FillArtTypesList(CFileItem& musicitem, CFileItemList& artlist)
   {
-    CMusicInfoTag &tag = *musicitem.GetMusicInfoTag();
+    const CMusicInfoTag& tag = *musicitem.GetMusicInfoTag();
     if (tag.GetDatabaseId() < 1 || tag.GetType().empty())
       return false;
     if (tag.GetType() != MediaTypeArtist && tag.GetType() != MediaTypeAlbum && tag.GetType() != MediaTypeSong)

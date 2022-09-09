@@ -112,8 +112,6 @@ bool CLinuxRendererGL::Register()
 
 CLinuxRendererGL::CLinuxRendererGL()
 {
-  m_textureTarget = GL_TEXTURE_2D;
-
   m_iFlags = 0;
   m_format = AV_PIX_FMT_NONE;
 
@@ -161,7 +159,7 @@ bool CLinuxRendererGL::ValidateRenderer()
     return false;
 
   int index = m_iYV12RenderBuffer;
-  CPictureBuffer& buf = m_buffers[index];
+  const CPictureBuffer& buf = m_buffers[index];
 
   if (!buf.fields[FIELD_FULL][0].id)
     return false;
@@ -2600,14 +2598,7 @@ bool CLinuxRendererGL::Supports(ESCALINGMETHOD method)
     if (m_renderSystem->IsExtSupported("GL_EXT_framebuffer_object"))
       hasFramebuffer = true;
     if (hasFramebuffer  && (m_renderMethod & RENDER_GLSL))
-    {
-      // spline36 and lanczos3 are only allowed through advancedsettings.xml
-      if(method != VS_SCALINGMETHOD_SPLINE36
-      && method != VS_SCALINGMETHOD_LANCZOS3)
-        return true;
-      else
-        return CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_videoEnableHighQualityHwScalers;
-    }
+      return true;
   }
 
   return false;
@@ -2717,7 +2708,7 @@ void CLinuxRendererGL::DeleteCLUT()
 
 void CLinuxRendererGL::CheckVideoParameters(int index)
 {
-  CPictureBuffer &buf = m_buffers[index];
+  const CPictureBuffer& buf = m_buffers[index];
   ETONEMAPMETHOD method = m_videoSettings.m_ToneMapMethod;
 
   AVColorPrimaries srcPrim = GetSrcPrimaries(buf.m_srcPrimaries, buf.image.width, buf.image.height);

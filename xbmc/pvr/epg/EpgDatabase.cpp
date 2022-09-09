@@ -426,25 +426,22 @@ std::shared_ptr<CPVREpgInfoTag> CPVREpgDatabase::CreateEpgTag(
     newTag->m_iFlags = m_pDS->fv("iFlags").get_asInt();
     newTag->m_strSeriesLink = m_pDS->fv("sSeriesLink").get_asString();
     newTag->m_strParentalRatingCode = m_pDS->fv("sParentalRatingCode").get_asString();
-    newTag->SetGenre(m_pDS->fv("iGenreType").get_asInt(), m_pDS->fv("iGenreSubType").get_asInt(),
-                     m_pDS->fv("sGenre").get_asString().c_str());
-    newTag->UpdatePath();
+    newTag->m_iGenreType = m_pDS->fv("iGenreType").get_asInt();
+    newTag->m_iGenreSubType = m_pDS->fv("iGenreSubType").get_asInt();
+    newTag->m_strGenreDescription = m_pDS->fv("sGenre").get_asString();
 
     return newTag;
   }
   return {};
 }
 
-CDateTime CPVREpgDatabase::GetFirstStartTime(int iEpgID)
+bool CPVREpgDatabase::HasTags(int iEpgID)
 {
   std::unique_lock<CCriticalSection> lock(m_critSection);
   const std::string strQuery =
-      PrepareSQL("SELECT MIN(iStartTime) FROM epgtags WHERE idEpg = %u;", iEpgID);
+      PrepareSQL("SELECT iStartTime FROM epgtags WHERE idEpg = %u LIMIT 1;", iEpgID);
   std::string strValue = GetSingleValue(strQuery);
-  if (!strValue.empty())
-    return CDateTime(static_cast<time_t>(std::atoi(strValue.c_str())));
-
-  return {};
+  return !strValue.empty();
 }
 
 CDateTime CPVREpgDatabase::GetLastEndTime(int iEpgID)
@@ -457,6 +454,30 @@ CDateTime CPVREpgDatabase::GetLastEndTime(int iEpgID)
     return CDateTime(static_cast<time_t>(std::atoi(strValue.c_str())));
 
   return {};
+}
+
+std::pair<CDateTime, CDateTime> CPVREpgDatabase::GetFirstAndLastEPGDate()
+{
+  CDateTime first;
+  CDateTime last;
+
+  std::unique_lock<CCriticalSection> lock(m_critSection);
+
+  // 1st query: get min start time
+  std::string strQuery = PrepareSQL("SELECT MIN(iStartTime) FROM epgtags;");
+
+  std::string strValue = GetSingleValue(strQuery);
+  if (!strValue.empty())
+    first = CDateTime(static_cast<time_t>(std::atoi(strValue.c_str())));
+
+  // 2nd query: get max end time
+  strQuery = PrepareSQL("SELECT MAX(iEndTime) FROM epgtags;");
+
+  strValue = GetSingleValue(strQuery);
+  if (!strValue.empty())
+    last = CDateTime(static_cast<time_t>(std::atoi(strValue.c_str())));
+
+  return {first, last};
 }
 
 CDateTime CPVREpgDatabase::GetMinStartTime(int iEpgID, const CDateTime& minStart)
@@ -499,7 +520,7 @@ namespace
 class CSearchTermConverter
 {
 public:
-  CSearchTermConverter(const std::string& strSearchTerm) { Parse(strSearchTerm); }
+  explicit CSearchTermConverter(const std::string& strSearchTerm) { Parse(strSearchTerm); }
 
   std::string ToSQL(const std::string& strFieldName) const
   {
@@ -675,9 +696,18 @@ std::vector<std::shared_ptr<CPVREpgInfoTag>> CPVREpgDatabase::GetEpgTags(
 
   if (searchData.m_iGenreType != EPG_SEARCH_UNSET)
   {
-    filter.AppendWhere(PrepareSQL("(iGenreType < %u) OR (iGenreType > %u) OR (iGenreType = %u)",
-                                  EPG_EVENT_CONTENTMASK_MOVIEDRAMA,
-                                  EPG_EVENT_CONTENTMASK_USERDEFINED, searchData.m_iGenreType));
+    if (searchData.m_bIncludeUnknownGenres)
+    {
+      // match the exact genre and everything with unknown genre
+      filter.AppendWhere(PrepareSQL("(iGenreType == %u) OR (iGenreType < %u) OR (iGenreType > %u)",
+                                    searchData.m_iGenreType, EPG_EVENT_CONTENTMASK_MOVIEDRAMA,
+                                    EPG_EVENT_CONTENTMASK_USERDEFINED));
+    }
+    else
+    {
+      // match only the exact genre
+      filter.AppendWhere(PrepareSQL("iGenreType == %u", searchData.m_iGenreType));
+    }
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////
@@ -1163,9 +1193,6 @@ bool CPVREpgDatabase::QueuePersistQuery(const CPVREpgInfoTag& tag)
   int iBroadcastId = tag.DatabaseID();
   std::string strQuery;
 
-  /* Only store the genre string when needed */
-  std::string strGenre = (tag.GenreType() == EPG_GENRE_USE_STRING || tag.GenreSubType() == EPG_GENRE_USE_STRING) ? tag.DeTokenize(tag.Genre()) : "";
-
   std::unique_lock<CCriticalSection> lock(m_critSection);
 
   if (iBroadcastId < 0)
@@ -1185,7 +1212,7 @@ bool CPVREpgDatabase::QueuePersistQuery(const CPVREpgInfoTag& tag)
         tag.OriginalTitle().c_str(), tag.DeTokenize(tag.Cast()).c_str(),
         tag.DeTokenize(tag.Directors()).c_str(), tag.DeTokenize(tag.Writers()).c_str(), tag.Year(),
         tag.IMDBNumber().c_str(), tag.ClientIconPath().c_str(), tag.GenreType(), tag.GenreSubType(),
-        strGenre.c_str(), sFirstAired.c_str(), tag.ParentalRating(), tag.StarRating(),
+        tag.GenreDescription().c_str(), sFirstAired.c_str(), tag.ParentalRating(), tag.StarRating(),
         tag.SeriesNumber(), tag.EpisodeNumber(), tag.EpisodePart(), tag.EpisodeName().c_str(),
         tag.Flags(), tag.SeriesLink().c_str(), tag.ParentalRatingCode().c_str(),
         tag.UniqueBroadcastID());
@@ -1207,7 +1234,7 @@ bool CPVREpgDatabase::QueuePersistQuery(const CPVREpgInfoTag& tag)
         tag.OriginalTitle().c_str(), tag.DeTokenize(tag.Cast()).c_str(),
         tag.DeTokenize(tag.Directors()).c_str(), tag.DeTokenize(tag.Writers()).c_str(), tag.Year(),
         tag.IMDBNumber().c_str(), tag.ClientIconPath().c_str(), tag.GenreType(), tag.GenreSubType(),
-        strGenre.c_str(), sFirstAired.c_str(), tag.ParentalRating(), tag.StarRating(),
+        tag.GenreDescription().c_str(), sFirstAired.c_str(), tag.ParentalRating(), tag.StarRating(),
         tag.SeriesNumber(), tag.EpisodeNumber(), tag.EpisodePart(), tag.EpisodeName().c_str(),
         tag.Flags(), tag.SeriesLink().c_str(), tag.ParentalRatingCode().c_str(),
         tag.UniqueBroadcastID(), iBroadcastId);

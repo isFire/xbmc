@@ -15,6 +15,7 @@
 #include "guilib/GUIComponent.h"
 #include "guilib/GUIWindowManager.h"
 #include "guilib/LocalizeStrings.h"
+#include "messaging/ApplicationMessenger.h"
 #include "network/Network.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/MediaSourceSettings.h"
@@ -90,10 +91,7 @@ static void ShowDiscoveryMessage(const char* function, const char* server_name, 
 
 struct UPnPServer
 {
-  UPnPServer()
-  {
-    m_nextWake = CDateTime::GetCurrentDateTime();
-  }
+  UPnPServer() : m_nextWake(CDateTime::GetCurrentDateTime()) {}
   bool operator == (const UPnPServer& server) const { return server.m_uuid == m_uuid; }
   bool operator != (const UPnPServer& server) const { return !(*this == server); }
   bool operator == (const std::string& server_uuid) const { return server_uuid == m_uuid; }
@@ -215,7 +213,7 @@ bool CMACDiscoveryJob::DoWork()
     return false;
   }
 
-  std::vector<CNetworkInterface*>& ifaces = CServiceBroker::GetNetwork().GetInterfaceList();
+  const std::vector<CNetworkInterface*>& ifaces = CServiceBroker::GetNetwork().GetInterfaceList();
   for (const auto& it : ifaces)
   {
     if (it->GetHostMacAddress(ipAddress, m_macAddress))
@@ -239,7 +237,7 @@ public:
 class NestDetect
 {
 public:
-  NestDetect() : m_gui_thread (g_application.IsCurrentThread())
+  NestDetect() : m_gui_thread(CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     if (m_gui_thread)
       ++m_nest;
@@ -271,7 +269,7 @@ class ProgressDialogHelper
 public:
   explicit ProgressDialogHelper (const std::string& heading) : m_dialog(0)
   {
-    if (g_application.IsCurrentThread())
+    if (CServiceBroker::GetAppMessenger()->IsProcessThread())
     {
       CGUIComponent *gui = CServiceBroker::GetGUI();
       if (gui)
@@ -527,7 +525,8 @@ bool CWakeOnAccess::WakeUpHost(const WakeUpEntry& server)
   {
     CLog::Log(LOGERROR,"WakeOnAccess failed to send. (Is it blocked by firewall?)");
 
-    if (g_application.IsCurrentThread() || !g_application.GetAppPlayer().IsPlaying())
+    if (CServiceBroker::GetAppMessenger()->IsProcessThread() ||
+        !g_application.GetAppPlayer().IsPlaying())
       CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Error, heading, LOCALIZED(13029));
     return false;
   }

@@ -26,11 +26,13 @@
 #include "settings/lib/Setting.h"
 #include "settings/lib/SettingDefinitions.h"
 #include "threads/Timer.h"
-#include "utils/log.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
-#include "utils/XMLUtils.h"
 #include "utils/Variant.h"
+#include "utils/XMLUtils.h"
+#include "utils/log.h"
+
+#include <charconv>
 
 #define XML_SETTINGS      "settings"
 #define XML_SETTING       "setting"
@@ -280,7 +282,20 @@ void CSkinInfo::LoadIncludes()
   m_includes.Load(includesPath);
 }
 
-void CSkinInfo::ResolveIncludes(TiXmlElement *node, std::map<INFO::InfoPtr, bool>* xmlIncludeConditions /* = NULL */)
+void CSkinInfo::LoadTimers()
+{
+  const std::string timersPath =
+      CSpecialProtocol::TranslatePathConvertCase(GetSkinPath("Timers.xml"));
+  CLog::LogF(LOGINFO, "Trying to load skin timers from {}", timersPath);
+  m_skinTimerManager.LoadTimers(timersPath);
+}
+
+void CSkinInfo::ProcessTimers()
+{
+  m_skinTimerManager.Process();
+}
+void CSkinInfo::ResolveIncludes(TiXmlElement* node,
+                                std::map<INFO::InfoPtr, bool>* xmlIncludeConditions /* = nullptr */)
 {
   if(xmlIncludeConditions)
     xmlIncludeConditions->clear();
@@ -399,6 +414,31 @@ void CSkinInfo::OnPostInstall(bool update, bool modal)
   }
 }
 
+void CSkinInfo::Unload()
+{
+  m_skinTimerManager.Stop();
+}
+
+bool CSkinInfo::TimerIsRunning(const std::string& timer) const
+{
+  return m_skinTimerManager.TimerIsRunning(timer);
+}
+
+float CSkinInfo::GetTimerElapsedSeconds(const std::string& timer) const
+{
+  return m_skinTimerManager.GetTimerElapsedSeconds(timer);
+}
+
+void CSkinInfo::TimerStart(const std::string& timer) const
+{
+  m_skinTimerManager.TimerStart(timer);
+}
+
+void CSkinInfo::TimerStop(const std::string& timer) const
+{
+  m_skinTimerManager.TimerStop(timer);
+}
+
 void CSkinInfo::SettingOptionsSkinColorsFiller(const SettingConstPtr& setting,
                                                std::vector<StringSettingOption>& list,
                                                std::string& current,
@@ -477,7 +517,7 @@ void CSkinInfo::SettingOptionsSkinFontsFiller(const SettingConstPtr& setting,
   {
     const char* idAttr = pChild->Attribute("id");
     const char* idLocAttr = pChild->Attribute("idloc");
-    if (idAttr != NULL)
+    if (idAttr != nullptr)
     {
       if (idLocAttr)
         list.emplace_back(g_localizeStrings.Get(atoi(idLocAttr)), idAttr);
@@ -586,6 +626,18 @@ int CSkinInfo::TranslateString(const std::string &setting)
   m_strings.insert(std::pair<int, CSkinSettingStringPtr>(number, skinString));
 
   return number;
+}
+
+int CSkinInfo::GetInt(int setting) const
+{
+  const std::string settingValue = GetString(setting);
+  if (settingValue.empty())
+  {
+    return -1;
+  }
+  int settingValueInt{-1};
+  std::from_chars(settingValue.data(), settingValue.data() + settingValue.size(), settingValueInt);
+  return settingValueInt;
 }
 
 const std::string& CSkinInfo::GetString(int setting) const
@@ -762,17 +814,17 @@ CSkinSettingPtr CSkinInfo::ParseSetting(const TiXmlElement* element)
   return setting;
 }
 
-bool CSkinInfo::SettingsInitialized() const
+bool CSkinInfo::SettingsLoaded(AddonInstanceId id /* = ADDON_SETTINGS_ID */) const
 {
-  return true;
-}
+  if (id != ADDON_SETTINGS_ID)
+    return false;
 
-bool CSkinInfo::SettingsLoaded() const
-{
   return !m_strings.empty() || !m_bools.empty();
 }
 
-bool CSkinInfo::SettingsFromXML(const CXBMCTinyXML &doc, bool loadDefaults /* = false */)
+bool CSkinInfo::SettingsFromXML(const CXBMCTinyXML& doc,
+                                bool loadDefaults,
+                                AddonInstanceId id /* = ADDON_SETTINGS_ID */)
 {
   const TiXmlElement *rootElement = doc.RootElement();
   if (rootElement == nullptr || rootElement->ValueStr().compare(XML_SETTINGS) != 0)
@@ -809,12 +861,12 @@ bool CSkinInfo::SettingsFromXML(const CXBMCTinyXML &doc, bool loadDefaults /* = 
   return true;
 }
 
-bool CSkinInfo::SettingsToXML(CXBMCTinyXML &doc) const
+bool CSkinInfo::SettingsToXML(CXBMCTinyXML& doc, AddonInstanceId id /* = ADDON_SETTINGS_ID */) const
 {
   // add the <skinsettings> tag
   TiXmlElement rootElement(XML_SETTINGS);
   TiXmlNode *settingsNode = doc.InsertEndChild(rootElement);
-  if (settingsNode == NULL)
+  if (settingsNode == nullptr)
   {
     CLog::Log(LOGWARNING, "CSkinInfo: could not create <settings> tag");
     return false;

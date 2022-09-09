@@ -35,10 +35,8 @@ class CDelayedMessage : public CThread
 };
 
 CDelayedMessage::CDelayedMessage(const ThreadMessage& msg, unsigned int delay)
-  : CThread("DelayedMessage")
+  : CThread("DelayedMessage"), m_msg(msg)
 {
-  m_msg = msg;
-
   m_delay = delay;
 }
 
@@ -287,5 +285,9 @@ void CApplicationMessenger::RegisterReceiver(IMessageTarget* target)
   m_mapTargets.insert(std::make_pair(target->GetMessageMask(), target));
 }
 
+bool CApplicationMessenger::IsProcessThread() const
+{
+  return m_processThreadId == CThread::GetCurrentThreadId();
+}
 }
 }

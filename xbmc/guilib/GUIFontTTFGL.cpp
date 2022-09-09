@@ -68,7 +68,11 @@ bool CGUIFontTTFGL::FirstBegin()
     internalFormat = GL_R8;
   else
     internalFormat = GL_LUMINANCE;
+  renderSystem->EnableShader(ShaderMethodGL::SM_FONTS);
 #else
+  CRenderSystemGLES* renderSystem =
+      dynamic_cast<CRenderSystemGLES*>(CServiceBroker::GetRenderSystem());
+  renderSystem->EnableGUIShader(ShaderMethodGLES::SM_FONTS);
   GLenum pixformat = GL_ALPHA; // deprecated
   GLenum internalFormat = GL_ALPHA;
 #endif
@@ -102,6 +106,9 @@ bool CGUIFontTTFGL::FirstBegin()
 
   if (m_textureStatus == TEXTURE_UPDATED)
   {
+    // Copies one more line in case we have to sample from there
+    m_updateY2 = std::min(m_updateY2 + 1, m_texture->GetHeight());
+
     glBindTexture(GL_TEXTURE_2D, m_nTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, m_updateY1, m_texture->GetWidth(), m_updateY2 - m_updateY1,
                     pixformat, GL_UNSIGNED_BYTE,
@@ -128,7 +135,6 @@ void CGUIFontTTFGL::LastEnd()
 
 #ifdef HAS_GL
   CRenderSystemGL* renderSystem = dynamic_cast<CRenderSystemGL*>(CServiceBroker::GetRenderSystem());
-  renderSystem->EnableShader(ShaderMethodGL::SM_FONTS);
 
   GLint posLoc = renderSystem->ShaderGetPos();
   GLint colLoc = renderSystem->ShaderGetCol();
@@ -184,7 +190,6 @@ void CGUIFontTTFGL::LastEnd()
   // GLES 2.0 version.
   CRenderSystemGLES* renderSystem =
       dynamic_cast<CRenderSystemGLES*>(CServiceBroker::GetRenderSystem());
-  renderSystem->EnableGUIShader(ShaderMethodGLES::SM_FONTS);
 
   GLint posLoc = renderSystem->GUIShaderGetPos();
   GLint colLoc = renderSystem->GUIShaderGetCol();

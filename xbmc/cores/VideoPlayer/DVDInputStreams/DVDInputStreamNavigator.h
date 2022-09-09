@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2018 Team Kodi
+ *  Copyright (C) 2005-2022 Team Kodi
  *  This file is part of Kodi - https://kodi.tv
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
@@ -13,7 +13,9 @@
 #include "DVDDemuxers/DVDDemux.h"
 #include "DVDInputStream.h"
 #include "DVDInputStreamFile.h"
+#include "DVDStateSerializer.h"
 #include "DllDvdNav.h"
+#include "cores/MenuType.h"
 #include "utils/Geometry.h"
 
 #include <string>
@@ -64,7 +66,12 @@ public:
   void OnDown() override;
   void OnLeft() override;
   void OnRight() override;
-  void OnMenu() override;
+
+  /*! \brief Open the Menu
+  * \return true if the menu is successfully opened, false otherwise
+  */
+  bool OnMenu() override;
+
   void OnBack() override;
   void OnNext() override;
   void OnPrevious() override;
@@ -75,7 +82,12 @@ public:
   int GetTotalButtons() override;
   bool GetCurrentButtonInfo(CDVDOverlaySpu* pOverlayPicture, CDVDDemuxSPU* pSPU, int iButtonType /* 0 = selection, 1 = action (clicked)*/);
 
-  bool HasMenu() override { return true; }
+  /*!
+   * \brief Get the supported menu type
+   * \return The supported menu type
+  */
+  MenuType GetSupportedMenuType() override { return MenuType::NATIVE; }
+
   bool IsInMenu() override { return m_bInMenu; }
   double GetTimeStampCorrection() override { return (double)(m_iVobUnitCorrection * 1000) / 90; }
 
@@ -113,6 +125,14 @@ public:
   bool PosTime(int iTimeInMsec) override; //seek within current pg(c)
 
   std::string GetDVDTitleString();
+
+  /*!
+   * \brief Get the DVD volume ID string. Alternative to the dvd title (since some DVD authors
+    even forget to set it).
+   * \return The DVD volume id
+  */
+  std::string GetDVDVolIdString();
+
   std::string GetDVDSerialString();
 
   void CheckButtons();
@@ -128,6 +148,12 @@ protected:
 
   int GetAngleCount();
   void GetVideoResolution(uint32_t * width, uint32_t * height);
+
+  /*! \brief Provided a pod DVDState struct, fill it with the current dvdnav state
+  * \param[in,out] dvdstate the DVD state struct to be filled
+  * \return true if it was possible to fill the state struct based on the current dvdnav state, false otherwise
+  */
+  bool FillDVDState(DVDState& dvdstate);
 
   DllDvdNav m_dll;
   bool m_bCheckButtons;
@@ -161,5 +187,8 @@ protected:
   int m_lastevent;
 
   std::map<int, std::map<int, int64_t>> m_mapTitleChapters;
+
+  /*! DVD state serializer handler */
+  CDVDStateSerializer m_dvdStateSerializer;
 };
 

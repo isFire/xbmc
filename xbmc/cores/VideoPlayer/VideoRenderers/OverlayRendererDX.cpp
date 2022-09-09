@@ -25,6 +25,8 @@
 #define ASSERT(f) _ASSERTE((f))
 #endif
 
+#include <cmath>
+
 using namespace OVERLAY;
 using namespace DirectX;
 
@@ -62,7 +64,7 @@ COverlayQuadsDX::COverlayQuadsDX(ASS_Image* images, float width, float height)
 {
   m_width  = 1.0;
   m_height = 1.0;
-  m_align  = ALIGN_VIDEO;
+  m_align = ALIGN_SCREEN;
   m_pos    = POSITION_RELATIVE;
   m_x      = 0.0f;
   m_y      = 0.0f;
@@ -219,14 +221,14 @@ COverlayImageDX::COverlayImageDX(CDVDOverlayImage* o, CRect& rSource)
     m_x = (0.5f * o->width + o->x) / o->source_width;
     m_y = (0.5f * o->height + o->y) / o->source_height;
 
-    int videoSourceH{static_cast<int>(rSource.Height())};
-    int videoSourceW{static_cast<int>(rSource.Width())};
+    const float subRatio{static_cast<float>(o->source_width) / o->source_height};
+    const float vidRatio{rSource.Width() / rSource.Height()};
 
-    if ((o->source_height == videoSourceH || videoSourceH % o->source_height == 0) &&
-        (o->source_width == videoSourceW || videoSourceW % o->source_width == 0))
+    // We always consider aligning 4/3 subtitles to the video,
+    // for example SD DVB subtitles (4/3) must be stretched on fullhd video
+
+    if (std::fabs(subRatio - vidRatio) < 0.001f || IsSquareResolution(subRatio))
     {
-      // We check also for multiple of source_height/source_width
-      // because for example 1080P subtitles can be used on 4K videos
       m_align = ALIGN_VIDEO;
       m_width = static_cast<float>(o->width) / o->source_width;
       m_height = static_cast<float>(o->height) / o->source_height;

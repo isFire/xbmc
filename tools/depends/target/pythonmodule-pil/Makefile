@@ -21,10 +21,6 @@ else ifeq ($(OS),darwin_embedded)
   PILPATH=$(PREFIX)/share/$(APP_NAME)/addons/script.module.pil
   PILPATHLIB=$(PILPATH)/lib
   PYTHONPATH=$(PILPATH):$(PYTHON_SITE_PKG)
-
-  # Work around an issue with xcode 11 stripping -arch arm64 flags.
-  # Not required for xcode 12+, but doesnt hurt either.
-  CFLAGS+= -target arm64-apple-darwin
 endif
 
 SED_FLAG=-i
@@ -33,21 +29,20 @@ ifeq (darwin, $(findstring darwin, $(BUILD)))
 endif
 
 ifeq (darwin, $(findstring darwin, $(HOST)))
-  LDSHARED:=$(CC) -bundle -undefined dynamic_lookup
+  ifeq ($(CPU),arm64)
+    # Work around an issue with xcode 11 stripping -arch arm64 flags.
+    # Not required for xcode 12+, but doesnt hurt either.
+    CFLAGS+= -target arm64-apple-darwin
+    LDFLAGS+= -target arm64-apple-darwin
+  endif
+
+  LDSHARED:=$(CC) -bundle -undefined dynamic_lookup $(LDFLAGS)
   export ZLIB_ROOT=$(SDKROOT)/usr
 endif
 
 BUILD_OPTS=--plat-name $(OS)-$(CPU) --disable-jpeg2000 --disable-webp --disable-imagequant --disable-tiff --disable-webp --disable-webpmux --disable-xcb --disable-lcms --disable-platform-guessing
 
-ifeq ($(TARGET_PLATFORM),appletvos)
-  # We cant export CFLAGS directly for tvos
-  # CFLAGS are added to linker command, having -bundle (LDSHARED) and -fembed_bitcode (CFLAGS)
-  # causes a failure: ld: -bundle and -bitcode_bundle (Xcode setting ENABLE_BITCODE=YES) cannot be used together
-  export CC:=$(CC) $(CFLAGS)
-else
-  export CC CFLAGS
-endif
-
+export CC CFLAGS
 export PYTHONXINCLUDE=$(PREFIX)/include/python$(PYTHON_VERSION)
 export LDSHARED LDFLAGS PYTHONPATH
 

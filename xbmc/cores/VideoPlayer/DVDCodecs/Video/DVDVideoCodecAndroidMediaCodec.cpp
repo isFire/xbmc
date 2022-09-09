@@ -14,7 +14,6 @@
 
 #include "DVDVideoCodecAndroidMediaCodec.h"
 
-#include "Application.h"
 #include "DVDCodecs/DVDFactoryCodec.h"
 #include "ServiceBroker.h"
 #include "cores/VideoPlayer/Buffers/VideoBuffer.h"
@@ -367,7 +366,7 @@ std::atomic<bool> CDVDVideoCodecAndroidMediaCodec::m_InstanceGuard(false);
 
 bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
-  int num_codecs;
+  std::vector<CJNIMediaCodecInfo> codecInfos;
   int profile(0);
   CJNIUUID uuid(0, 0);
 
@@ -662,11 +661,10 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
 
   m_codec = nullptr;
   m_colorFormat = -1;
-  num_codecs = CJNIMediaCodecList::getCodecCount();
+  codecInfos = CJNIMediaCodecList(CJNIMediaCodecList::REGULAR_CODECS).getCodecInfos();
 
-  for (int i = 0; i < num_codecs; i++)
+  for (const CJNIMediaCodecInfo& codec_info : codecInfos)
   {
-    CJNIMediaCodecInfo codec_info = CJNIMediaCodecList::getCodecInfoAt(i);
     if (codec_info.isEncoder())
       continue;
 
@@ -976,11 +974,24 @@ bool CDVDVideoCodecAndroidMediaCodec::AddData(const DemuxPacket &packet)
                                          packet.cryptoInfo->numSubSamples);
 
         cryptoInfo = new CJNIMediaCodecCryptoInfo();
+        if (CJNIBase::GetSDKVersion() < 25 &&
+            packet.cryptoInfo->mode == CJNIMediaCodec::CRYPTO_MODE_AES_CBC)
+        {
+          CLog::LogF(LOGERROR, "Device API does not support CBCS decryption");
+          return false;
+        }
 
-        cryptoInfo->set(packet.cryptoInfo->numSubSamples, clearBytes, cipherBytes,
-                        std::vector<char>(packet.cryptoInfo->kid, packet.cryptoInfo->kid + 16),
-                        std::vector<char>(packet.cryptoInfo->iv, packet.cryptoInfo->iv + 16),
-                        CJNIMediaCodec::CRYPTO_MODE_AES_CTR);
+        cryptoInfo->set(
+            packet.cryptoInfo->numSubSamples, clearBytes, cipherBytes,
+            std::vector<char>(std::begin(packet.cryptoInfo->kid), std::end(packet.cryptoInfo->kid)),
+            std::vector<char>(std::begin(packet.cryptoInfo->iv), std::end(packet.cryptoInfo->iv)),
+            packet.cryptoInfo->mode == CJNIMediaCodec::CRYPTO_MODE_AES_CBC
+                ? CJNIMediaCodec::CRYPTO_MODE_AES_CBC
+                : CJNIMediaCodec::CRYPTO_MODE_AES_CTR);
+
+        CJNIMediaCodecCryptoInfoPattern cryptoInfoPattern(packet.cryptoInfo->cryptBlocks,
+                                                          packet.cryptoInfo->skipBlocks);
+        cryptoInfo->setPattern(cryptoInfoPattern);
       }
       if (dst_ptr)
       {
@@ -1334,7 +1345,7 @@ bool CDVDVideoCodecAndroidMediaCodec::ConfigureMediaCodec(void)
   // setup a MediaFormat to match the video content,
   // used by codec during configure
   CJNIMediaFormat mediaformat =
-      CJNIMediaFormat::createVideoFormat(m_mime.c_str(), m_hints.width, m_hints.height);
+      CJNIMediaFormat::createVideoFormat(m_mime, m_hints.width, m_hints.height);
   mediaformat.setInteger(CJNIMediaFormat::KEY_MAX_INPUT_SIZE, 0);
 
   if (CJNIBase::GetSDKVersion() >= 23 && m_render_surface)
@@ -1627,7 +1638,7 @@ void CDVDVideoCodecAndroidMediaCodec::InitSurfaceTexture(void)
   // to create/fetch/create from g_RenderManager. But g_RenderManager
   // does not know we are using MediaCodec until Configure and we
   // we need m_surfaceTexture valid before then. Chicken, meet Egg.
-  if (g_application.IsCurrentThread())
+  if (CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     // localize GLuint so we do not spew gles includes in our header
     GLuint texture_id;

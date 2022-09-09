@@ -336,7 +336,8 @@ PopulateObjectFromTag(CVideoInfoTag&         tag,
     for (unsigned int index = 0; index < tag.m_genre.size(); index++)
       object.m_Affiliation.genres.Add(tag.m_genre.at(index).c_str());
 
-    for(CVideoInfoTag::iCast it = tag.m_cast.begin();it != tag.m_cast.end();it++) {
+    for (CVideoInfoTag::iCast it = tag.m_cast.begin(); it != tag.m_cast.end(); ++it)
+    {
         object.m_People.actors.Add(it->strName.c_str(), it->strRole.c_str());
     }
 
@@ -1050,6 +1051,7 @@ CFileItemPtr BuildObject(PLT_MediaObject* entry,
       pItem->SetProperty("numepisodes", episodes);
       pItem->SetProperty("watchedepisodes", played);
       pItem->SetProperty("unwatchedepisodes", episodes - played);
+      pItem->SetProperty("watchedepisodepercent", episodes > 0 ? played * 100 / episodes : 0);
       watched = (episodes && played >= episodes);
       pItem->GetVideoInfoTag()->SetPlayCount(watched ? 1 : 0);
     }

@@ -18,6 +18,7 @@
 #include "VideoPlayerTeletext.h"
 #include "VideoPlayerVideo.h"
 #include "cores/IPlayer.h"
+#include "cores/MenuType.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
 #include "guilib/DispResource.h"
@@ -45,7 +46,7 @@ struct SPlayerState
     dts = DVD_NOPTS_VALUE;
     player_state  = "";
     isInMenu = false;
-    hasMenu = false;
+    menuType = MenuType::NONE;
     chapter = 0;
     chapters.clear();
     canpause = false;
@@ -72,7 +73,7 @@ struct SPlayerState
 
   std::string player_state; // full player state
   bool isInMenu;
-  bool hasMenu;
+  MenuType menuType;
   bool streamsReady;
 
   int chapter;              // current chapter
@@ -256,14 +257,19 @@ public:
   void Seek(bool bPlus, bool bLargeStep, bool bChapterOverride) override;
   bool SeekScene(bool bPlus = true) override;
   void SeekPercentage(float iPercent) override;
-  float GetCachePercentage() override;
+  float GetCachePercentage() const override;
 
   void SetDynamicRangeCompression(long drc) override;
   bool CanPause() override;
   void SetAVDelay(float fValue = 0.0f) override;
   float GetAVDelay() override;
   bool IsInMenu() const override;
-  bool HasMenu() const override;
+
+  /*!
+   * \brief Get the supported menu type
+   * \return The supported menu type
+  */
+  MenuType GetSupportedMenuType() const override;
 
   void SetSubTitleDelay(float fValue = 0.0f) override;
   float GetSubTitleDelay() override;
@@ -273,6 +279,15 @@ public:
   void SetSubtitle(int iStream) override;
   bool GetSubtitleVisible() override;
   void SetSubtitleVisible(bool bVisible) override;
+
+  /*!
+   * \brief Set the subtitle vertical position,
+   * it depends on current screen resolution
+   * \param value The subtitle position in pixels
+   * \param save If true, the value will be saved to resolution info
+   */
+  void SetSubtitleVerticalPosition(const int value, bool save) override;
+
   void AddSubtitle(const std::string& strSubPath) override;
 
   int GetAudioStreamCount() override;
@@ -290,8 +305,6 @@ public:
 
   std::shared_ptr<TextCacheStruct_t> GetTeletextCache() override;
   void LoadPage(int p, int sp, unsigned char* buffer) override;
-
-  std::string GetRadioText(unsigned int line) override;
 
   int  GetChapterCount() override;
   int  GetChapter() override;
@@ -339,7 +352,7 @@ public:
   int OnDiscNavResult(void* pData, int iMessage) override;
   void GetVideoResolution(unsigned int &width, unsigned int &height) override;
 
-  CVideoSettings GetVideoSettings() override;
+  CVideoSettings GetVideoSettings() const override;
   void SetVideoSettings(CVideoSettings& settings) override;
 
   void SetUpdateStreamDetails();

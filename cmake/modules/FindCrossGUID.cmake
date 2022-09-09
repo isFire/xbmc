@@ -11,40 +11,30 @@
 #
 # and the following imported targets::
 #
-#   crossguid   - The CrossGUID library
+#   CrossGUID::CrossGUID   - The CrossGUID library
 
 if(ENABLE_INTERNAL_CROSSGUID)
   include(cmake/scripts/common/ModuleHelpers.cmake)
 
   set(MODULE_LC crossguid)
 
-  # Temp: We force CMAKE_BUILD_TYPE to release, and makefile builds respect this
-  # Multi config generators (eg VS, Xcode) dont, so handle debug postfix build/link for them only
-  if(NOT (CMAKE_GENERATOR STREQUAL "Unix Makefiles" OR CMAKE_GENERATOR STREQUAL "Ninja"))
-    set(CROSSGUID_DEBUG_POSTFIX "-dgb")
-  endif()
-
   SETUP_BUILD_VARS()
 
   set(CROSSGUID_VERSION ${${MODULE}_VER})
   set(CROSSGUID_DEFINITIONS -DHAVE_NEW_CROSSGUID)
+  set(CROSSGUID_DEBUG_POSTFIX "-dgb")
 
   if(ANDROID)
     list(APPEND CROSSGUID_DEFINITIONS -DGUID_ANDROID)
   endif()
 
-  # Use custom findpatch to handle windows patch binary if not available
-  include(cmake/modules/FindPatch.cmake)
+  set(patches "${CMAKE_SOURCE_DIR}/tools/depends/target/crossguid/001-fix-unused-function.patch"
+              "${CMAKE_SOURCE_DIR}/tools/depends/target/crossguid/002-disable-Wall-error.patch")
 
-  set(PATCH_COMMAND ${PATCH_EXECUTABLE} -p1 -i ${CMAKE_SOURCE_DIR}/tools/depends/target/crossguid/001-fix-unused-function.patch
-            COMMAND ${PATCH_EXECUTABLE} -p1 -i ${CMAKE_SOURCE_DIR}/tools/depends/target/crossguid/002-disable-Wall-error.patch)
+  generate_patchcommand("${patches}")
 
-  # Force release build type. crossguid forces a debug postfix -dgb. may want to patch this
-  # if we enable adaptive build type for the library.
-  set(CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}
-                 -DCROSSGUID_TESTS=OFF
-                 -DDISABLE_WALL=ON
-                 -DCMAKE_BUILD_TYPE=Release)
+  set(CMAKE_ARGS -DCROSSGUID_TESTS=OFF
+                 -DDISABLE_WALL=ON)
 
   BUILD_DEP_TARGET()
 
@@ -87,13 +77,6 @@ if(CROSSGUID_FOUND)
     list(APPEND CROSSGUID_DEFINITIONS -DHAVE_NEW_CROSSGUID)
   endif()
 
-  if(NOT TARGET crossguid)
-    add_library(crossguid UNKNOWN IMPORTED)
-    set_target_properties(crossguid PROPERTIES
-                                    IMPORTED_LOCATION "${CROSSGUID_LIBRARY}"
-                                    INTERFACE_INCLUDE_DIRECTORIES "${CROSSGUID_INCLUDE_DIR}")
-  endif()
-
   if(UNIX AND NOT (APPLE OR ANDROID))
     # Suppress mismatch warning, see https://cmake.org/cmake/help/latest/module/FindPackageHandleStandardArgs.html
     set(FPHSA_NAME_MISMATCHED 1)
@@ -103,6 +86,25 @@ if(CROSSGUID_FOUND)
     list(APPEND CROSSGUID_LIBRARIES ${UUID_LIBRARIES})
   endif()
 
-  set_property(GLOBAL APPEND PROPERTY INTERNAL_DEPS_PROP crossguid)
+  if(NOT TARGET CrossGUID::CrossGUID)
+    add_library(CrossGUID::CrossGUID UNKNOWN IMPORTED)
+    if(CROSSGUID_LIBRARY_RELEASE)
+      set_target_properties(CrossGUID::CrossGUID PROPERTIES
+                                                 IMPORTED_CONFIGURATIONS RELEASE
+                                                 IMPORTED_LOCATION "${CROSSGUID_LIBRARY_RELEASE}")
+    endif()
+    if(CROSSGUID_LIBRARY_DEBUG)
+      set_target_properties(CrossGUID::CrossGUID PROPERTIES
+                                                 IMPORTED_CONFIGURATIONS DEBUG
+                                                 IMPORTED_LOCATION "${CROSSGUID_LIBRARY_DEBUG}")
+    endif()
+    set_target_properties(CrossGUID::CrossGUID PROPERTIES
+                                               INTERFACE_INCLUDE_DIRECTORIES "${CROSSGUID_INCLUDE_DIRS}")
+  endif()
+  if(TARGET crossguid)
+    add_dependencies(CrossGUID::CrossGUID crossguid)
+  endif()
+  set_property(GLOBAL APPEND PROPERTY INTERNAL_DEPS_PROP CrossGUID::CrossGUID)
+
 endif()
 mark_as_advanced(CROSSGUID_INCLUDE_DIR CROSSGUID_LIBRARY)

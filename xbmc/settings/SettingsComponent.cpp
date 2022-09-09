@@ -8,11 +8,9 @@
 
 #include "SettingsComponent.h"
 
-#include "AdvancedSettings.h"
-#include "AppParamParser.h"
+#include "AppParams.h"
 #include "CompileInfo.h"
 #include "ServiceBroker.h"
-#include "Settings.h"
 #include "Util.h"
 #include "filesystem/Directory.h"
 #include "filesystem/SpecialProtocol.h"
@@ -23,38 +21,44 @@
 #include "platform/Environment.h"
 #endif
 #include "profiles/ProfileManager.h"
-#include "utils/log.h"
+#include "settings/AdvancedSettings.h"
+#include "settings/Settings.h"
+#include "settings/SubtitlesSettings.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
+#include "utils/log.h"
 #ifdef TARGET_WINDOWS
 #include "win32util.h"
 #endif
 
 CSettingsComponent::CSettingsComponent()
+  : m_settings(new CSettings()),
+    m_advancedSettings(new CAdvancedSettings()),
+    m_subtitlesSettings(new KODI::SUBTITLES::CSubtitlesSettings(m_settings)),
+    m_profileManager(new CProfileManager())
 {
-  m_advancedSettings.reset(new CAdvancedSettings());
-  m_settings.reset(new CSettings());
-  m_profileManager.reset(new CProfileManager());
 }
 
 CSettingsComponent::~CSettingsComponent()
 {
 }
 
-void CSettingsComponent::Initialize(const CAppParamParser& params)
+void CSettingsComponent::Initialize()
 {
   if (m_state == State::DEINITED)
   {
+    const auto params = CServiceBroker::GetAppParams();
+
     // only the InitDirectories* for the current platform should return true
-    bool inited = InitDirectoriesLinux(params.HasPlatformDirectories());
+    bool inited = InitDirectoriesLinux(params->HasPlatformDirectories());
     if (!inited)
-      inited = InitDirectoriesOSX(params.HasPlatformDirectories());
+      inited = InitDirectoriesOSX(params->HasPlatformDirectories());
     if (!inited)
-      inited = InitDirectoriesWin32(params.HasPlatformDirectories());
+      inited = InitDirectoriesWin32(params->HasPlatformDirectories());
 
     m_settings->Initialize();
 
-    m_advancedSettings->Initialize(params, *m_settings->GetSettingsManager());
+    m_advancedSettings->Initialize(*m_settings->GetSettingsManager());
     URIUtils::RegisterAdvancedSettings(*m_advancedSettings);
 
     m_profileManager->Initialize(m_settings);
@@ -103,6 +107,8 @@ void CSettingsComponent::Deinitialize()
   {
     if (m_state == State::LOADED)
     {
+      m_subtitlesSettings.reset();
+
       m_settings->Unload();
 
       XFILE::IDirectory::UnregisterProfileManager();
@@ -126,6 +132,11 @@ std::shared_ptr<CSettings> CSettingsComponent::GetSettings()
 std::shared_ptr<CAdvancedSettings> CSettingsComponent::GetAdvancedSettings()
 {
   return m_advancedSettings;
+}
+
+std::shared_ptr<KODI::SUBTITLES::CSubtitlesSettings> CSettingsComponent::GetSubtitlesSettings()
+{
+  return m_subtitlesSettings;
 }
 
 std::shared_ptr<CProfileManager> CSettingsComponent::GetProfileManager()

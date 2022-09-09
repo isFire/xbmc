@@ -205,6 +205,8 @@ bool CAddonInfoBuilder::ParseXML(const AddonInfoPtr& addon, const TiXmlElement* 
     addon->m_path = URIUtils::AddFileToFolder(repo.datadir, addon->m_id, StringUtils::Format("{}-{}.zip", addon->m_id, addon->m_version.asString()));
   }
 
+  addon->m_profilePath = StringUtils::Format("special://profile/addon_data/{}/", addon->m_id);
+
   /*
    * Parse addon.xml:
    * <extension>
@@ -440,6 +442,17 @@ bool CAddonInfoBuilder::ParseXML(const AddonInfoPtr& addon, const TiXmlElement* 
       return false;
     }
   }
+
+  if (!isRepoXMLContent)
+  {
+    using XFILE::CFile;
+    if (CFile::Exists(URIUtils::AddFileToFolder(addonPath, "resources", "settings.xml")))
+      addon->m_supportsAddonSettings = true;
+    if (CFile::Exists(URIUtils::AddFileToFolder(addonPath, "resources", "instance-settings.xml")))
+      addon->m_supportsInstanceSettings = true;
+  }
+
+  addon->m_addonInstanceSupportType = CAddonInfo::InstanceSupportType(addon->m_mainType);
 
   return true;
 }
@@ -684,6 +697,9 @@ bool CAddonInfoBuilder::PlatformSupportsAddon(const AddonInfoPtr& addon)
 #if defined(__x86_64__)
     "osx64",
     "osx-x86_64",
+#elif defined(__aarch64__)
+    "osxarm64",
+    "osx-arm64",
 #else
 #warning no architecture dependant platform tag
 #endif

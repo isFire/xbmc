@@ -72,7 +72,7 @@ float CRenderManager::GetAspectRatio()
     return 1.0f;
 }
 
-void CRenderManager::SetVideoSettings(CVideoSettings settings)
+void CRenderManager::SetVideoSettings(const CVideoSettings& settings)
 {
   std::unique_lock<CCriticalSection> lock(m_statelock);
   if (m_pRenderer)
@@ -229,6 +229,7 @@ bool CRenderManager::Configure()
     m_renderDebug = false;
     m_clockSync.Reset();
     m_dvdClock.SetVsyncAdjust(0);
+    m_overlays.Reset();
     m_overlays.SetStereoMode(m_stereomode);
 
     m_renderState = STATE_CONFIGURED;
@@ -356,7 +357,7 @@ void CRenderManager::PreInit()
       return;
   }
 
-  if (!g_application.IsCurrentThread())
+  if (!CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     m_initEvent.Reset();
     CServiceBroker::GetAppMessenger()->PostMsg(TMSG_RENDERER_PREINIT);
@@ -385,7 +386,7 @@ void CRenderManager::PreInit()
 
 void CRenderManager::UnInit()
 {
-  if (!g_application.IsCurrentThread())
+  if (!CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     m_initEvent.Reset();
     CServiceBroker::GetAppMessenger()->PostMsg(TMSG_RENDERER_UNINIT);
@@ -397,7 +398,7 @@ void CRenderManager::UnInit()
 
   std::unique_lock<CCriticalSection> lock(m_statelock);
 
-  m_overlays.Flush();
+  m_overlays.UnInit();
   m_debugRenderer.Dispose();
 
   DeleteRenderer();
@@ -416,7 +417,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
   if (!m_pRenderer)
     return true;
 
-  if (g_application.IsCurrentThread())
+  if (CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     CLog::Log(LOGDEBUG, "{} - flushing renderer", __FUNCTION__);
 
@@ -549,7 +550,7 @@ void CRenderManager::StartRenderCapture(unsigned int captureId, unsigned int wid
   capture->SetFlags(flags);
   capture->GetEvent().Reset();
 
-  if (g_application.IsCurrentThread())
+  if (CServiceBroker::GetAppMessenger()->IsProcessThread())
   {
     if (flags & CAPTUREFLAG_IMMEDIATELY)
     {
@@ -771,8 +772,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
     }
   }
 
-
-  SPresent& m = m_Queue[m_presentsource];
+  const SPresent& m = m_Queue[m_presentsource];
 
   {
     std::unique_lock<CCriticalSection> lock(m_presentlock);
@@ -832,7 +832,7 @@ bool CRenderManager::IsVideoLayer()
 /* simple present method */
 void CRenderManager::PresentSingle(bool clear, DWORD flags, DWORD alpha)
 {
-  SPresent& m = m_Queue[m_presentsource];
+  const SPresent& m = m_Queue[m_presentsource];
 
   if (m.presentfield == FS_BOT)
     m_pRenderer->RenderUpdate(m_presentsource, m_presentsourcePast, clear, flags | RENDER_FLAG_BOT, alpha);
@@ -846,7 +846,7 @@ void CRenderManager::PresentSingle(bool clear, DWORD flags, DWORD alpha)
  * we just render the two fields right after eachother */
 void CRenderManager::PresentFields(bool clear, DWORD flags, DWORD alpha)
 {
-  SPresent& m = m_Queue[m_presentsource];
+  const SPresent& m = m_Queue[m_presentsource];
 
   if(m_presentstep == PRESENT_FRAME)
   {
@@ -866,7 +866,7 @@ void CRenderManager::PresentFields(bool clear, DWORD flags, DWORD alpha)
 
 void CRenderManager::PresentBlend(bool clear, DWORD flags, DWORD alpha)
 {
-  SPresent& m = m_Queue[m_presentsource];
+  const SPresent& m = m_Queue[m_presentsource];
 
   if( m.presentfield == FS_BOT )
   {
@@ -946,6 +946,11 @@ void CRenderManager::ToggleDebugVideo()
   m_renderDebug = isEnabled;
   m_debugTimer.SetExpired();
   m_renderDebugVideo = true;
+}
+
+void CRenderManager::SetSubtitleVerticalPosition(int value, bool save)
+{
+  m_overlays.SetSubtitleVerticalPosition(value, save);
 }
 
 bool CRenderManager::AddVideoPicture(const VideoPicture& picture, volatile std::atomic_bool& bStop, EINTERLACEMETHOD deintMethod, bool wait)

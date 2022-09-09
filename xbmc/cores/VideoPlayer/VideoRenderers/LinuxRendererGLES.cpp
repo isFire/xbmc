@@ -36,7 +36,6 @@ using namespace Shaders::GLES;
 
 CLinuxRendererGLES::CLinuxRendererGLES()
 {
-  m_textureTarget = GL_TEXTURE_2D;
   m_format = AV_PIX_FMT_NONE;
 
   m_fullRange = !CServiceBroker::GetWinSystem()->UseLimitedColor();
@@ -1739,16 +1738,7 @@ bool CLinuxRendererGLES::Supports(ESCALINGMETHOD method)
 
     if (m_renderMethod & RENDER_GLSL)
     {
-      // spline36 and lanczos3 are only allowed through advancedsettings.xml
-      if(method != VS_SCALINGMETHOD_SPLINE36 &&
-         method != VS_SCALINGMETHOD_LANCZOS3)
-      {
-        return true;
-      }
-      else
-      {
-        return CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_videoEnableHighQualityHwScalers;
-      }
+      return true;
     }
   }
 

@@ -16,6 +16,7 @@
 #include "Util.h"
 #include "commons/Exception.h"
 #include "cores/FFmpeg.h"
+#include "cores/MenuType.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h" // for DVD_TIME_BASE
 #include "filesystem/CurlFile.h"
 #include "filesystem/Directory.h"
@@ -25,6 +26,7 @@
 #include "settings/SettingsComponent.h"
 #include "threads/SystemClock.h"
 #include "utils/FontUtils.h"
+#include "utils/LangCodeExpander.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/XTimeUtils.h"
@@ -199,7 +201,6 @@ static int64_t dvd_file_seek(void* h, int64_t pos, int whence)
 CDVDDemuxFFmpeg::CDVDDemuxFFmpeg() : CDVDDemux()
 {
   m_pFormatContext = NULL;
-  m_pInput = NULL;
   m_ioContext = NULL;
   m_currentPts = DVD_NOPTS_VALUE;
   m_bMatroska = false;
@@ -919,6 +920,19 @@ AVDictionary* CDVDDemuxFFmpeg::GetFFMpegOptionsFromInput()
       av_dict_set(&options, "http_proxy", urlStream.str().c_str(), 0);
     }
 
+    // rtsp options
+    if (url.IsProtocol("rtsp"))
+    {
+      CVariant transportProp{m_pInput->GetProperty("rtsp_transport")};
+      if (!transportProp.isNull() &&
+          (transportProp == "tcp" || transportProp == "udp" || transportProp == "udp_multicast"))
+      {
+        CLog::LogF(LOGDEBUG, "GetFFMpegOptionsFromInput() Forcing rtsp transport protocol to '{}'",
+                   transportProp.asString());
+        av_dict_set(&options, "rtsp_transport", transportProp.asString().c_str(), 0);
+      }
+    }
+
     // rtmp options
     if (url.IsProtocol("rtmp")  || url.IsProtocol("rtmpt")  ||
         url.IsProtocol("rtmpe") || url.IsProtocol("rtmpte") ||
@@ -989,9 +1003,13 @@ double CDVDDemuxFFmpeg::ConvertTimestamp(int64_t pts, int den, int num)
   double timestamp = (double)pts * num / den;
   double starttime = 0.0;
 
-  std::shared_ptr<CDVDInputStream::IMenus> menu = std::dynamic_pointer_cast<CDVDInputStream::IMenus>(m_pInput);
-  if (!menu && m_pFormatContext->start_time != (int64_t)AV_NOPTS_VALUE)
-    starttime = (double)m_pFormatContext->start_time / AV_TIME_BASE;
+  const std::shared_ptr<CDVDInputStream::IMenus> menuInterface =
+      std::dynamic_pointer_cast<CDVDInputStream::IMenus>(m_pInput);
+  if ((!menuInterface || menuInterface->GetSupportedMenuType() != MenuType::NATIVE) &&
+      m_pFormatContext->start_time != static_cast<int64_t>(AV_NOPTS_VALUE))
+  {
+    starttime = static_cast<double>(m_pFormatContext->start_time) / AV_TIME_BASE;
+  }
 
   if (m_checkTransportStream)
     starttime = m_startTime;
@@ -1662,30 +1680,16 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         st->colorSpace = pStream->codecpar->color_space;
         st->colorTransferCharacteristic = pStream->codecpar->color_trc;
         st->colorRange = pStream->codecpar->color_range;
+        st->hdr_type = DetermineHdrType(pStream);
 
         int size = 0;
         uint8_t* side_data = nullptr;
-
-        side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, &size);
-        if (side_data && size)
-          st->hdr_type = StreamHdrType::HDR_TYPE_DOLBYVISION;
-        else if (st->colorPrimaries == AVCOL_PRI_BT2020)
-        {
-          if (st->colorTransferCharacteristic == AVCOL_TRC_SMPTE2084) // hdr10
-            st->hdr_type = StreamHdrType::HDR_TYPE_HDR10;
-          else if (st->colorTransferCharacteristic == AVCOL_TRC_ARIB_STD_B67) // hlg
-            st->hdr_type = StreamHdrType::HDR_TYPE_HLG;
-        }
 
         side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, &size);
         if (side_data && size)
         {
           st->masteringMetaData = std::make_shared<AVMasteringDisplayMetadata>(
               *reinterpret_cast<AVMasteringDisplayMetadata*>(side_data));
-          // file could be SMPTE2086 which FFmpeg currently returns as unknown so use the presence
-          // of static metadata to detect it
-          if (st->masteringMetaData->has_primaries && st->masteringMetaData->has_luminance)
-            st->hdr_type = StreamHdrType::HDR_TYPE_HDR10;
         }
 
         side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, &size);
@@ -1844,7 +1848,23 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
       }
     }
     if (langTag)
+    {
       stream->language = std::string(langTag->value, 3);
+      //! @FIXME: Matroska v4 support BCP-47 language code with LanguageIETF element
+      //! that have the priority over the Language element, but this is not currently
+      //! implemented in to ffmpeg library. Since ffmpeg read only the Language element
+      //! all tracks will be identified with same language (of Language element).
+      //! As workaround to allow set the right language code we provide the possibility
+      //! to set the language code in the title field, this allow to kodi to recognize
+      //! the right language and select the right track to be played at playback starts.
+      AVDictionaryEntry* title = av_dict_get(pStream->metadata, "title", NULL, 0);
+      if (title && title->value)
+      {
+        const std::string langCode = g_LangCodeExpander.FindLanguageCodeWithSubtag(title->value);
+        if (!langCode.empty())
+          stream->language = langCode;
+      }
+    }
 
     if (stream->type != STREAM_NONE && pStream->codecpar->extradata && pStream->codecpar->extradata_size > 0)
     {
@@ -2496,4 +2516,22 @@ void CDVDDemuxFFmpeg::GetL16Parameters(int &channels, int &samplerate)
       }
     }
   }
+}
+
+StreamHdrType CDVDDemuxFFmpeg::DetermineHdrType(AVStream* pStream)
+{
+  StreamHdrType hdrType = StreamHdrType::HDR_TYPE_NONE;
+
+  if (av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, nullptr)) // DoVi
+    hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
+  else if (pStream->codecpar->color_trc == AVCOL_TRC_SMPTE2084) // HDR10
+    hdrType = StreamHdrType::HDR_TYPE_HDR10;
+  else if (pStream->codecpar->color_trc == AVCOL_TRC_ARIB_STD_B67) // HLG
+    hdrType = StreamHdrType::HDR_TYPE_HLG;
+  // file could be SMPTE2086 which FFmpeg currently returns as unknown
+  // so use the presence of static metadata to detect it
+  else if (av_stream_get_side_data(pStream, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, nullptr))
+    hdrType = StreamHdrType::HDR_TYPE_HDR10;
+
+  return hdrType;
 }

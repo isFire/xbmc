@@ -8,8 +8,7 @@
 
 #include "AdvancedSettings.h"
 
-#include "AppParamParser.h"
-#include "Application.h"
+#include "AppParams.h"
 #include "LangInfo.h"
 #include "ServiceBroker.h"
 #include "filesystem/File.h"
@@ -86,11 +85,28 @@ void CAdvancedSettings::OnSettingChanged(const std::shared_ptr<const CSetting>& 
     SetDebugMode(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
 }
 
-void CAdvancedSettings::Initialize(const CAppParamParser &params, CSettingsManager& settingsMgr)
+void CAdvancedSettings::Initialize(CSettingsManager& settingsMgr)
 {
   Initialize();
 
-  params.SetAdvancedSettings(*this);
+  const auto params = CServiceBroker::GetAppParams();
+
+  if (params->GetLogLevel() == LOG_LEVEL_DEBUG)
+  {
+    m_logLevel = LOG_LEVEL_DEBUG;
+    m_logLevelHint = LOG_LEVEL_DEBUG;
+    CServiceBroker::GetLogging().SetLogLevel(LOG_LEVEL_DEBUG);
+  }
+
+  const std::string& settingsFile = params->GetSettingsFile();
+  if (!settingsFile.empty())
+    AddSettingsFile(settingsFile);
+
+  if (params->IsStartFullScreen())
+    m_startFullScreen = true;
+
+  if (params->IsStandAlone())
+    m_handleMounting = true;
 
   settingsMgr.RegisterSettingsHandler(this, true);
   std::set<std::string> settingSet;
@@ -145,7 +161,6 @@ void CAdvancedSettings::Initialize()
   m_videoPlayCountMinimumPercent = 90.0f;
   m_videoVDPAUScaling = -1;
   m_videoNonLinStretchRatio = 0.5f;
-  m_videoEnableHighQualityHwScalers = false;
   m_videoAutoScaleMaxFps = 30.0f;
   m_videoCaptureUseOcclusionQuery = -1; //-1 is auto detect
   m_videoVDPAUtelecine = false;
@@ -177,7 +192,7 @@ void CAdvancedSettings::Initialize()
   m_cddbAddress = "gnudb.gnudb.org";
   m_addSourceOnTop = false;
 
-  m_handleMounting = g_application.IsStandAlone();
+  m_handleMounting = CServiceBroker::GetAppParams()->IsStandAlone();
 
   m_fullScreenOnMovieStart = true;
   m_cachePath = "special://temp/";
@@ -271,6 +286,7 @@ void CAdvancedSettings::Initialize()
   m_fanartRes = 1080;
   m_imageRes = 720;
   m_imageScalingAlgorithm = CPictureScalingAlgorithm::Default;
+  m_imageQualityJpeg = 4;
 
   m_sambaclienttimeout = 30;
   m_sambadoscodepage = "";
@@ -433,8 +449,6 @@ void CAdvancedSettings::Initialize()
   m_stereoscopicregex_sbs = "[-. _]h?sbs[-. _]";
   m_stereoscopicregex_tab = "[-. _]h?tab[-. _]";
 
-  m_videoSubtitleVerticalMargin = -1;
-
   m_logLevelHint = m_logLevel = LOG_LEVEL_NORMAL;
 
   m_openGlDebugging = false;
@@ -591,7 +605,6 @@ void CAdvancedSettings::ParseSettingsFile(const std::string &file)
   pElement = pRootElement->FirstChildElement("video");
   if (pElement)
   {
-    XMLUtils::GetInt(pElement, "subtitleverticalmargin", m_videoSubtitleVerticalMargin);
     XMLUtils::GetString(pElement, "stereoscopicregex3d", m_stereoscopicregex_3d);
     XMLUtils::GetString(pElement, "stereoscopicregexsbs", m_stereoscopicregex_sbs);
     XMLUtils::GetString(pElement, "stereoscopicregextab", m_stereoscopicregex_tab);
@@ -635,7 +648,6 @@ void CAdvancedSettings::ParseSettingsFile(const std::string &file)
     XMLUtils::GetString(pElement,"ppffmpegpostprocessing",m_videoPPFFmpegPostProc);
     XMLUtils::GetInt(pElement,"vdpauscaling",m_videoVDPAUScaling);
     XMLUtils::GetFloat(pElement, "nonlinearstretchratio", m_videoNonLinStretchRatio, 0.01f, 1.0f);
-    XMLUtils::GetBoolean(pElement,"enablehighqualityhwscalers", m_videoEnableHighQualityHwScalers);
     XMLUtils::GetFloat(pElement,"autoscalemaxfps",m_videoAutoScaleMaxFps, 0.0f, 1000.0f);
     XMLUtils::GetInt(pElement, "useocclusionquery", m_videoCaptureUseOcclusionQuery, -1, 1);
     XMLUtils::GetBoolean(pElement,"vdpauInvTelecine",m_videoVDPAUtelecine);
@@ -1073,6 +1085,7 @@ void CAdvancedSettings::ParseSettingsFile(const std::string &file)
   XMLUtils::GetUInt(pRootElement, "imageres", m_imageRes, 0, 9999);
   if (XMLUtils::GetString(pRootElement, "imagescalingalgorithm", tmp))
     m_imageScalingAlgorithm = CPictureScalingAlgorithm::FromString(tmp);
+  XMLUtils::GetUInt(pRootElement, "imagequalityjpeg", m_imageQualityJpeg, 0, 21);
   XMLUtils::GetBoolean(pRootElement, "playlistasfolders", m_playlistAsFolders);
   XMLUtils::GetBoolean(pRootElement, "uselocalecollation", m_useLocaleCollation);
   XMLUtils::GetBoolean(pRootElement, "detectasudf", m_detectAsUdf);

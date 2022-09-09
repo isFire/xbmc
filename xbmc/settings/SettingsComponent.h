@@ -10,10 +10,17 @@
 
 #include <memory>
 
-class CAppParamParser;
 class CAdvancedSettings;
 class CProfileManager;
 class CSettings;
+
+namespace KODI
+{
+namespace SUBTITLES
+{
+class CSubtitlesSettings;
+} // namespace SUBTITLES
+} // namespace KODI
 
 class CSettingsComponent
 {
@@ -23,9 +30,8 @@ public:
 
   /*!
    * @brief Initialize all subcomponents with system default values (loaded from code, system settings files, ...).
-   * @param params The command line params passed to the app.
    */
-  void Initialize(const CAppParamParser& params);
+  void Initialize();
 
   /*!
    * @brief Initialize all subcomponents with user values (loaded from user settings files, according to active profile).
@@ -51,6 +57,12 @@ public:
   std::shared_ptr<CAdvancedSettings> GetAdvancedSettings();
 
   /*!
+   * @brief Get access to the subtitles settings subcomponent.
+   * @return the subtiltles settings subcomponent.
+   */
+  std::shared_ptr<KODI::SUBTITLES::CSubtitlesSettings> GetSubtitlesSettings();
+
+  /*!
    * @brief Get access to the profiles manager subcomponent.
    * @return the profiles manager subcomponent.
    */
@@ -72,5 +84,6 @@ private:
 
   std::shared_ptr<CSettings> m_settings;
   std::shared_ptr<CAdvancedSettings> m_advancedSettings;
+  std::shared_ptr<KODI::SUBTITLES::CSubtitlesSettings> m_subtitlesSettings;
   std::shared_ptr<CProfileManager> m_profileManager;
 };

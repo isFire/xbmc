@@ -11,7 +11,6 @@ DEPENDS = \
   dav1d \
   expat \
   ffmpeg \
-  flatbuffers \
   fmt \
   fontconfig \
   freetype2 \
@@ -26,16 +25,12 @@ DEPENDS = \
   libass \
   libbluray \
   libcec \
-  libdvdcss \
-  libdvdnav \
-  libdvdread \
   libffi \
   libgcrypt \
   libgpg-error \
   libjpeg-turbo \
   liblzo2 \
   libmicrohttpd \
-  libnfs \
   libplist \
   libpng \
   libshairplay \
@@ -47,14 +42,12 @@ DEPENDS = \
   nghttp2 \
   openssl \
   p8-platform \
-  pcre \
   python3 \
   pythonmodule-pil \
   pythonmodule-pycryptodome \
   pythonmodule-setuptools \
   spdlog \
   sqlite3 \
-  taglib \
   tinyxml \
   udfread \
   xz
@@ -77,13 +70,15 @@ endif
 ifeq ($(OS),osx)
   EXCLUDED_DEPENDS = libusb
   ifneq ($(CPU),arm64)
-    DEPENDS += libsdl
+    ifeq ($(WINDOW_SYSTEM),sdl)
+      DEPENDS += libsdl
+    endif
   endif
 endif
 
 ifeq ($(OS),android)
   EXCLUDED_DEPENDS = libcec libusb gtest
-  DEPENDS += dummy-libxbmc libuuid libandroidjni libzip
+  DEPENDS += dummy-libxbmc libuuid
   PYMODULE_DEPS = dummy-libxbmc
   LIBUUID = libuuid
 endif
@@ -135,8 +130,8 @@ curl: openssl nghttp2
 dav1d: meson-cross-file
 dbus: expat
 ffmpeg: $(ICONV) $(ZLIB) bzip2 gnutls dav1d $(LIBVA)
-fontconfig: freetype2 expat $(ICONV) $(LIBUUID)
-freetype2: harfbuzz $(ZLIB)
+fontconfig: freetype2 expat $(ICONV) $(LIBUUID) meson-cross-file
+freetype2: bzip2 harfbuzz $(ZLIB)
 fribidi: meson-cross-file
 gettext: $(ICONV)
 gnutls: nettle $(ZLIB)
@@ -147,8 +142,6 @@ libcdio-gplv3: $(ICONV)
 libcdio: $(ICONV)
 libcec: p8-platform
 libdrm: meson-cross-file
-libdvdnav: libdvdread
-libdvdread: libdvdcss
 libevdev: libudev
 libgcrypt: libgpg-error
 libinput: mtdev libevdev meson-cross-file
@@ -157,6 +150,7 @@ libplist: $(ZLIB)
 libpng: $(ZLIB)
 spdlog: fmt
 libva: libdrm $(LIBVA_DEPS)
+libxml2: $(ZLIB)
 libxslt: libgcrypt libxml2
 libzip: bzip2 gnutls $(ZLIB)
 mariadb: openssl $(ICONV) $(ZLIB)

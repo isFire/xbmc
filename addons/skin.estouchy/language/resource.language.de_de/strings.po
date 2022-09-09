@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: KODI Main\n"
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
 "POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"PO-Revision-Date: 2021-12-15 09:24+0000\n"
+"PO-Revision-Date: 2022-06-29 20:15+0000\n"
 "Last-Translator: Kai Sommerfeld <kai.sommerfeld@gmx.com>\n"
 "Language-Team: German <https://kodi.weblate.cloud/projects/kodi-add-ons-skins/skin-estouchy/de_de/>\n"
 "Language: de_de\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.9.1\n"
+"X-Generator: Weblate 4.13\n"
 
 msgctxt "Addon Summary"
 msgid "Skin for touchscreen devices"
@@ -239,8 +239,8 @@ msgid "Configure & manage media sharing services · Configure & manage the weath
 msgstr "Medienfreigabedienste konfigurieren und verwalten · Wetterdienst konfigurieren und verwalten"
 
 msgctxt "#31406"
-msgid "Configure display · Configure audio · Configure internet access · Configure power saving· Configure logging"
-msgstr "Anzeige konfigurieren · Audio konfigurieren · Internetzugriff konfigurieren · Stromsparfunktionen konfigurieren · Protokollierung konfigurieren"
+msgid "Configure display · Configure audio · Configure internet access · Configure power saving · Configure logging"
+msgstr "Einstellungen Anzeige · Audio · Internet · Energiesparen · Protokollierung"
 
 msgctxt "#31407"
 msgid "Manage your installed add-ons · Browse for and install add-ons from kodi.tv · Modify add-on settings"
@@ -346,37 +346,37 @@ msgstr "Gelöschte anzeigen"
 #. Label to show the video codec name
 msgctxt "#31600"
 msgid "Video codec"
-msgstr "Video-Codec"
+msgstr "Videocodec"
 
 #. Label to show the video resolution
 msgctxt "#31601"
 msgid "Video resolution"
-msgstr "Video-Auflösung"
+msgstr "Videoauflösung"
 
 #. Label to show the video aspect
 msgctxt "#31602"
 msgid "Video aspect"
-msgstr "Video-Seitenverhältnis"
+msgstr "Videoseitenverhältnis"
 
 #. Label to show the video bitrate
 msgctxt "#31603"
 msgid "Video bitrate"
-msgstr "Video-Bitrate"
+msgstr "Videobitrate"
 
 #. Label to show the audio codec name
 msgctxt "#31604"
 msgid "Audio codec"
-msgstr "Audio-Codec"
+msgstr "Audiocodec"
 
 #. Label to show the number of audio channels
 msgctxt "#31605"
 msgid "Audio channels"
-msgstr "Audio-Kanäle"
+msgstr "Audiokanäle"
 
 #. Label to show the audio bitrate
 msgctxt "#31606"
 msgid "Audio bitrate"
-msgstr "Audio-Bitrate"
+msgstr "Audiobitrate"
 
 #. Label to show the screen resolution
 msgctxt "#31607"
@@ -386,7 +386,7 @@ msgstr "Bildschirmauflösung"
 #. Label to show the system rendering speed
 msgctxt "#31608"
 msgid "System rendering speed"
-msgstr "Render-Geschwindigkeit"
+msgstr "Rendergeschwindigkeit"
 
 #. Label to show the system CPU usage
 msgctxt "#31609"
@@ -422,6 +422,10 @@ msgstr "Während Musik oder ein Video wiedergegeben wird, erscheint der Titel am
 msgctxt "#31904"
 msgid "Now Playing Title..."
 msgstr "Laufender Titel..."
+
+#~ msgctxt "#31406"
+#~ msgid "Configure display · Configure audio · Configure internet access · Configure power saving· Configure logging"
+#~ msgstr "Anzeige konfigurieren · Audio konfigurieren · Internetzugriff konfigurieren · Stromsparfunktionen konfigurieren · Protokollierung konfigurieren"
 
 #~ msgctxt "#31017"
 #~ msgid "PVR info"

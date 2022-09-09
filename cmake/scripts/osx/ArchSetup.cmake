@@ -23,15 +23,13 @@ else()
   endif()
 endif()
 
-if(NOT TARBALL_DIR)
-  set(TARBALL_DIR "/Users/Shared/xbmc-depends/xbmc-tarballs")
+# m1 macs can execute x86_64 code via rosetta
+if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND
+   CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+  set(HOST_CAN_EXECUTE_TARGET TRUE)
 endif()
 
 set(CMAKE_OSX_ARCHITECTURES ${CPU})
-
-if(CMAKE_GENERATOR STREQUAL Xcode)
-  set(DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
-endif()
 
 # Additional SYSTEM_DEFINES
 list(APPEND SYSTEM_DEFINES -DHAS_POSIX_NETWORK -DHAS_OSX_NETWORK -DHAS_ZEROCONF)
@@ -44,7 +42,8 @@ list(APPEND DEPLIBS "-framework DiskArbitration" "-framework IOKit"
                     "-framework CoreAudio" "-framework AudioToolbox"
                     "-framework CoreGraphics" "-framework CoreMedia"
                     "-framework VideoToolbox" "-framework Security"
-                    "-framework GameController")
+                    "-framework GameController" "-framework Speech"
+                    "-framework AVFoundation")
 
 if(ARCH STREQUAL aarch64)
   set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0)

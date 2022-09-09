@@ -33,8 +33,6 @@ endif()
 
 list(APPEND CMAKE_SYSTEM_PREFIX_PATH ${NATIVEPREFIX})
 
-set(DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
-
 list(APPEND DEPLIBS "-framework CoreFoundation" "-framework CoreVideo"
                     "-framework CoreAudio" "-framework AudioToolbox"
                     "-framework QuartzCore" "-framework MediaPlayer"
@@ -44,14 +42,15 @@ list(APPEND DEPLIBS "-framework CoreFoundation" "-framework CoreVideo"
                     "-framework VideoToolbox" "-lresolv" "-ObjC"
                     "-framework AVKit" "-framework GameController")
 
+# Speech not available on tvOS
+if(NOT CORE_PLATFORM_NAME_LC STREQUAL tvos)
+  list(APPEND DEPLIBS "-framework Speech")
+endif()
+
 set(ENABLE_OPTICAL OFF CACHE BOOL "" FORCE)
 set(CMAKE_XCODE_ATTRIBUTE_INLINES_ARE_PRIVATE_EXTERN OFF)
 set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN OFF)
 set(CMAKE_XCODE_ATTRIBUTE_COPY_PHASE_STRIP OFF)
-
-if(NOT TARBALL_DIR)
-  set(TARBALL_DIR "/Users/Shared/xbmc-depends/xbmc-tarballs")
-endif()
 
 include(cmake/scripts/darwin/Macros.cmake)
 enable_arc()

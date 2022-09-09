@@ -9,6 +9,7 @@
 #pragma once
 
 #include "addons/Addon.h"
+#include "addons/gui/skin/SkinTimerManager.h"
 #include "guilib/GUIIncludes.h" // needed for the GUIInclude member
 #include "windowing/GraphicContext.h" // needed for the RESOLUTION members
 
@@ -123,7 +124,9 @@ public:
    \param baseDir [in] If non-empty, the given directory is searched instead of the skin's directory.  Defaults to empty.
    \return path to the XML file
    */
-  std::string GetSkinPath(const std::string& file, RESOLUTION_INFO *res = NULL, const std::string& baseDir = "") const;
+  std::string GetSkinPath(const std::string& file,
+                          RESOLUTION_INFO* res = nullptr,
+                          const std::string& baseDir = "") const;
 
   /*! \brief Return whether skin debugging is enabled
    \return true if skin debugging (set via <debugging>true</debugging> in addon.xml) is enabled.
@@ -150,7 +153,8 @@ public:
    */
   static bool TranslateResolution(const std::string &name, RESOLUTION_INFO &res);
 
-  void ResolveIncludes(TiXmlElement *node, std::map<INFO::InfoPtr, bool>* xmlIncludeConditions = NULL);
+  void ResolveIncludes(TiXmlElement* node,
+                       std::map<INFO::InfoPtr, bool>* xmlIncludeConditions = nullptr);
 
   float GetEffectsSlowdown() const { return m_effectsSlowDown; }
 
@@ -166,6 +170,21 @@ public:
   const std::string& GetCurrentAspect() const { return m_currentAspect; }
 
   void LoadIncludes();
+
+  /*! \brief Load the defined skin timers
+   \details Skin timers are defined in Timers.xml \sa Skin_Timers
+   */
+  void LoadTimers();
+
+  /*! \brief Starts evaluating timers
+   */
+  void ProcessTimers();
+
+  /*! \brief Called when unloading a skin, allows to cleanup specific
+   * skin resources.
+   */
+  void Unload();
+
   void ToggleDebug();
   const INFO::CSkinVariableString* CreateSkinVariable(const std::string& name, int context);
 
@@ -188,8 +207,8 @@ public:
 
   /*! \brief Don't handle skin settings like normal addon settings
    */
-  bool HasSettings() override { return false; }
-  bool HasUserSettings() override { return false; }
+  bool HasSettings(AddonInstanceId id = ADDON_SETTINGS_ID) override { return false; }
+  bool HasUserSettings(AddonInstanceId id = ADDON_SETTINGS_ID) override { return false; }
 
   int TranslateString(const std::string &setting);
   const std::string& GetString(int setting) const;
@@ -198,6 +217,12 @@ public:
   int TranslateBool(const std::string &setting);
   bool GetBool(int setting) const;
   void SetBool(int setting, bool set);
+
+  /*! \brief Get the skin setting value as an integer value
+   * \param setting - the setting id
+   * \return the setting value as an integer, -1 if no conversion is possible
+   */
+  int GetInt(int setting) const;
 
   std::set<CSkinSettingPtr> GetSkinSettings() const;
   CSkinSettingPtr GetSkinSetting(const std::string& settingId);
@@ -210,15 +235,41 @@ public:
 
   void OnPreInstall() override;
   void OnPostInstall(bool update, bool modal) override;
+
+  // skin timer methods
+
+  /*! \brief Checks if the timer with name `timer` is running
+   \param timer the name of the skin timer
+   \return true if the given timer exists and is running, false otherwise
+   */
+  bool TimerIsRunning(const std::string& timer) const;
+
+  /*! \brief Get the elapsed seconds since the timer with name `timer` was started
+   \param timer the name of the skin timer
+   \return the elapsed time in seconds the given timer is running (0 if not running or if it does not exist)
+   */
+  float GetTimerElapsedSeconds(const std::string& timer) const;
+
+  /*! \brief Starts/Enables a given skin timer
+   \param timer the name of the skin timer
+   */
+  void TimerStart(const std::string& timer) const;
+
+  /*! \brief Stops/Disables a given skin timer
+   \param timer the name of the skin timer
+   */
+  void TimerStop(const std::string& timer) const;
+
 protected:
   bool LoadStartupWindows(const AddonInfoPtr& addonInfo);
 
   static CSkinSettingPtr ParseSetting(const TiXmlElement* element);
 
-  bool SettingsInitialized() const override;
-  bool SettingsLoaded() const override;
-  bool SettingsFromXML(const CXBMCTinyXML &doc, bool loadDefaults = false) override;
-  bool SettingsToXML(CXBMCTinyXML &doc) const override;
+  bool SettingsLoaded(AddonInstanceId id = ADDON_SETTINGS_ID) const override;
+  bool SettingsFromXML(const CXBMCTinyXML& doc,
+                       bool loadDefaults,
+                       AddonInstanceId id = ADDON_SETTINGS_ID) override;
+  bool SettingsToXML(CXBMCTinyXML& doc, AddonInstanceId id = ADDON_SETTINGS_ID) const override;
 
   RESOLUTION_INFO m_defaultRes;
   std::vector<RESOLUTION_INFO> m_resolutions;
@@ -229,6 +280,9 @@ protected:
 
   std::vector<CStartupWindow> m_startupWindows;
   bool m_debugging;
+
+  /*! Manager/Owner of skin timers */
+  CSkinTimerManager m_skinTimerManager;
 
 private:
   std::map<int, CSkinSettingStringPtr> m_strings;

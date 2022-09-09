@@ -10,6 +10,7 @@
 
 #include "IPlayerCallback.h"
 #include "Interface/StreamInfo.h"
+#include "MenuType.h"
 #include "VideoSettings.h"
 
 #include <memory>
@@ -105,7 +106,7 @@ public:
   virtual void Seek(bool bPlus = true, bool bLargeStep = false, bool bChapterOverride = false) = 0;
   virtual bool SeekScene(bool bPlus = true) {return false;}
   virtual void SeekPercentage(float fPercent = 0){}
-  virtual float GetCachePercentage(){ return 0;}
+  virtual float GetCachePercentage() const { return 0; }
   virtual void SetMute(bool bOnOff){}
   virtual void SetVolume(float volume){}
   virtual void SetDynamicRangeCompression(long drc){}
@@ -121,6 +122,14 @@ public:
   virtual void SetSubtitle(int iStream) {}
   virtual bool GetSubtitleVisible() { return false; }
   virtual void SetSubtitleVisible(bool bVisible) {}
+
+  /*!
+   * \brief Set the subtitle vertical position,
+   * it depends on current screen resolution
+   * \param value The subtitle position in pixels
+   * \param save If true, the value will be saved to resolution info
+   */
+  virtual void SetSubtitleVerticalPosition(int value, bool save) {}
 
   /** \brief Adds the subtitle(s) provided by the given file to the available player streams
   *          and actives the first of the added stream(s). E.g., vob subs can contain multiple streams.
@@ -144,8 +153,6 @@ public:
 
   virtual std::shared_ptr<TextCacheStruct_t> GetTeletextCache() { return NULL; }
   virtual void LoadPage(int p, int sp, unsigned char* buffer) {}
-
-  virtual std::string GetRadioText(unsigned int line) { return ""; }
 
   virtual int  GetChapterCount()                               { return 0; }
   virtual int  GetChapter()                                    { return -1; }
@@ -188,7 +195,12 @@ public:
   virtual int GetCacheLevel() const { return -1; }
 
   virtual bool IsInMenu() const { return false; }
-  virtual bool HasMenu() const { return false; }
+
+  /*!
+   * \brief Get the supported menu type
+   * \return The supported menu type
+  */
+  virtual MenuType GetSupportedMenuType() const { return MenuType::NONE; }
 
   virtual void DoAudioWork() {}
   virtual bool OnAction(const CAction& action) { return false; }
@@ -241,7 +253,7 @@ public:
   }
 
   // video and audio settings
-  virtual CVideoSettings GetVideoSettings() { return CVideoSettings(); }
+  virtual CVideoSettings GetVideoSettings() const { return CVideoSettings(); }
   virtual void SetVideoSettings(CVideoSettings& settings) {}
 
   /*!

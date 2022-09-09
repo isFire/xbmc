@@ -6,10 +6,11 @@
     android:versionName="@APP_VERSION@">
 
     <uses-sdk
-        android:minSdkVersion="21"
-        android:targetSdkVersion="29" />
+        android:minSdkVersion="@TARGET_MINSDK@"
+        android:targetSdkVersion="@TARGET_SDK@" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.GET_TASKS" />
@@ -17,9 +18,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-feature
         android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
         android:required="false" />
     <uses-feature
         android:name="android.hardware.screen.landscape"
@@ -166,5 +171,14 @@
            android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
+
+    <queries>
+      <intent>
+        <action android:name="android.speech.RecognitionService" />
+      </intent>
+      <intent>
+        <action android:name="android.intent.action.MAIN" />
+      </intent>
+    </queries>
 
 </manifest><!-- END_INCLUDE(manifest) -->

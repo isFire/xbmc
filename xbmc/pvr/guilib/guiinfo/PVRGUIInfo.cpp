@@ -215,9 +215,9 @@ void CPVRGUIInfo::UpdateQualityData()
   const int channelUid = playbackState->GetPlayingChannelUniqueID();
   if (channelUid > 0)
   {
-    std::shared_ptr<CPVRClient> client;
-    CServiceBroker::GetPVRManager().Clients()->GetCreatedClient(playbackState->GetPlayingClientID(),
-                                                                client);
+    const std::shared_ptr<CPVRClient> client =
+        CServiceBroker::GetPVRManager().Clients()->GetCreatedClient(
+            playbackState->GetPlayingClientID());
     if (client)
       client->SignalQuality(channelUid, qualityInfo);
   }
@@ -239,9 +239,9 @@ void CPVRGUIInfo::UpdateDescrambleData()
   const int channelUid = playbackState->GetPlayingChannelUniqueID();
   if (channelUid > 0)
   {
-    std::shared_ptr<CPVRClient> client;
-    CServiceBroker::GetPVRManager().Clients()->GetCreatedClient(playbackState->GetPlayingClientID(),
-                                                                client);
+    const std::shared_ptr<CPVRClient> client =
+        CServiceBroker::GetPVRManager().Clients()->GetCreatedClient(
+            playbackState->GetPlayingClientID());
     if (client)
       client->GetDescrambleInfo(channelUid, descrambleInfo);
   }
@@ -252,7 +252,7 @@ void CPVRGUIInfo::UpdateDescrambleData()
 
 void CPVRGUIInfo::UpdateMisc()
 {
-  CPVRManager& mgr = CServiceBroker::GetPVRManager();
+  const CPVRManager& mgr = CServiceBroker::GetPVRManager();
   bool bStarted = mgr.IsStarted();
   const std::shared_ptr<CPVRPlaybackState> state = mgr.PlaybackState();
 
@@ -1133,14 +1133,10 @@ bool CPVRGUIInfo::GetRadioRDSLabel(const CFileItem* item, const CGUIInfo& info, 
       case RDS_AUDIO_LANG:
         strValue = tag->GetLanguage();
         return true;
+      case RDS_GET_RADIOTEXT_LINE:
+        strValue = tag->GetRadioText(info.GetData1());
+        return true;
     }
-  }
-
-  switch (info.m_info)
-  {
-    case RDS_GET_RADIOTEXT_LINE:
-      strValue = g_application.GetAppPlayer().GetRadioText(info.GetData1());
-      return true;
   }
   return false;
 }
@@ -1627,10 +1623,10 @@ bool CPVRGUIInfo::GetRadioRDSBool(const CFileItem* item, const CGUIInfo& info, b
     switch (info.m_info)
     {
       case RDS_HAS_RADIOTEXT:
-        bValue = tag->IsPlayingRadiotext();
+        bValue = tag->IsPlayingRadioText();
         return true;
       case RDS_HAS_RADIOTEXT_PLUS:
-        bValue = tag->IsPlayingRadiotextPlus();
+        bValue = tag->IsPlayingRadioTextPlus();
         return true;
       case RDS_HAS_HOTLINE_DATA:
         bValue = (!tag->GetEMailHotline().empty() || !tag->GetPhoneHotline().empty());

@@ -19,7 +19,7 @@ function(add_addon_depends addon searchpath)
     if(NOT (file MATCHES CMakeLists.txt OR
             file MATCHES install.txt OR
             file MATCHES noinstall.txt OR
-            file MATCHES flags.txt OR
+            file MATCHES "flags.*[.]txt" OR
             file MATCHES deps.txt OR
             file MATCHES "[a-z]+-deps[.]txt" OR
             file MATCHES platforms.txt))
@@ -59,6 +59,15 @@ function(add_addon_depends addon searchpath)
           message(STATUS "${id} extraflags: ${extraflags}")
         endif()
 
+        if(EXISTS ${dir}/flags-${CPU}.txt)
+          set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dir}/flags-${CPU}.txt)
+          file(STRINGS ${dir}/flags-${CPU}.txt archextraflags)
+          string(REPLACE " " ";" archextraflags ${archextraflags})
+
+          message(STATUS "${id} ${CPU} extraflags: ${archextraflags}")
+          list(APPEND extraflags ${archextraflags})
+        endif()
+
         set(BUILD_ARGS -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
                        -DOUTPUT_DIR=${OUTPUT_DIR}
                        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -90,6 +99,12 @@ function(add_addon_depends addon searchpath)
           message(${BUILD_ARGS})
         endif()
 
+        if(ADDON_EXTRA_ARGS)
+          string(REPLACE " " ";" ADDON_EXTRA_ARGS ${ADDON_EXTRA_ARGS})
+          list(APPEND BUILD_ARGS ${ADDON_EXTRA_ARGS})
+          message("Addon Extra Args: ${ADDON_EXTRA_ARGS}")
+        endif()
+
         # used for addons where need special folders to store there content (if
         # not set the addon define it byself).
         # e.g. Google Chromium addon where his git bring:
@@ -116,8 +131,18 @@ function(add_addon_depends addon searchpath)
           if(NOT PATCH_PROGRAM OR "${PATCH_PROGRAM}" STREQUAL "")
             if(NOT PATCH_EXECUTABLE)
               # find the path to the patch executable
-              find_program(PATCH_EXECUTABLE NAMES patch)
 
+              if(WIN32)
+                # On Windows prioritize Git patch.exe
+                find_package(Git)
+                if(Git_FOUND)
+                  get_filename_component(GIT_DIR ${GIT_EXECUTABLE} DIRECTORY)
+                  get_filename_component(GIT_DIR ${GIT_DIR} DIRECTORY)
+                endif()
+                find_program(PATCH_EXECUTABLE NAMES patch.exe HINTS ${GIT_DIR} PATH_SUFFIXES usr/bin)
+              else()
+                find_program(PATCH_EXECUTABLE NAMES patch)
+              endif()
               if(NOT PATCH_EXECUTABLE)
                 message(FATAL_ERROR "Missing patch command (we looked in ${CMAKE_PREFIX_PATH})")
               endif()

@@ -314,6 +314,7 @@
     <category id="discs" label="14087" help="36193">
       <group id="1" label="446">
         <setting id="dvds.autorun" type="boolean" label="14088" help="36194">
+          <requirement>HAS_DVD_DRIVE</requirement>
           <level>0</level>
           <default>false</default>
           <control type="toggle" />
@@ -335,6 +336,7 @@
         </setting>
       </group>
       <group id="2" label="14234">
+        <requirement>HAVE_LIBBLURAY</requirement>
         <setting id="bluray.playerregion" type="integer" label="14121" help="38017">
           <level>1</level>
           <default>1</default> <!-- region A -->
@@ -362,6 +364,7 @@
       </group>
       <group id="3" label="620">
         <setting id="audiocds.autoaction" type="integer" label="14097" help="36283">
+          <requirement>HAS_DVD_DRIVE</requirement>
           <level>1</level>
           <default>0</default> <!-- AUTOCD_NONE -->
           <constraints>
@@ -370,11 +373,13 @@
           <control type="list" format="string" />
         </setting>
         <setting id="audiocds.usecddb" type="boolean" label="227" help="36284">
+          <requirement>HAS_DVD_DRIVE</requirement>
           <level>1</level>
           <default>true</default>
           <control type="toggle" />
         </setting>
         <setting id="audiocds.recordingpath" type="path" label="20000" help="36285">
+          <requirement>HAS_CDDA_RIPPER</requirement>
           <level>3</level>
           <default></default>
           <constraints>
@@ -385,6 +390,7 @@
           </control>
         </setting>
         <setting id="audiocds.trackpathformat" type="string" label="13307" help="36286">
+          <requirement>HAS_CDDA_RIPPER</requirement>
           <level>3</level>
           <default>%A/%A - %B/[%N. ][%A - ]%T</default>
           <control type="edit" format="string">
@@ -392,6 +398,7 @@
           </control>
         </setting>
         <setting id="audiocds.encoder" type="addon" label="621" help="36287">
+          <requirement>HAS_CDDA_RIPPER</requirement>
           <level>3</level>
           <default>audioencoder.kodi.builtin.aac</default>
           <constraints>
@@ -402,6 +409,7 @@
           </control>
         </setting>
         <setting id="audiocds.settings" parent="audiocds.encoder" type="action" label="21417" help="37025">
+          <requirement>HAS_CDDA_RIPPER</requirement>
           <level>3</level>
           <dependencies>
             <dependency type="enable">
@@ -411,6 +419,7 @@
           <control type="button" format="action" />
         </setting>
         <setting id="audiocds.ejectonrip" type="boolean" label="14099" help="36291">
+          <requirement>HAS_CDDA_RIPPER</requirement>
           <level>3</level>
           <default>true</default>
           <control type="toggle" />
@@ -473,49 +482,40 @@
           </constraints>
           <control type="list" format="string" />
         </setting>
-        <setting id="subtitles.parsecaptions" type="boolean" label="24130" help="24131">
-          <level>1</level>
+      </group>
+      <group id="3" label="37032">
+        <setting id="accessibility.audiovisual" type="boolean" label="37034" help="37035">
+          <level>0</level>
           <default>false</default>
           <control type="toggle" />
         </setting>
-        <setting id="subtitles.captionsalign" parent="subtitles.parsecaptions" type="integer" label="39161">
-          <level>2</level>
-          <default>0</default> <!-- SUBTITLE_HORIZONTAL_ALIGN_LEFT -->
-          <constraints>
-            <options>
-              <option label="39162">0</option> <!-- SUBTITLE_HORIZONTAL_ALIGN_LEFT -->
-              <option label="39163">1</option> <!-- SUBTITLE_HORIZONTAL_ALIGN_CENTER -->
-              <option label="39164">2</option> <!-- SUBTITLE_HORIZONTAL_ALIGN_RIGHT -->
-            </options>
-          </constraints>
-          <dependencies>
-            <dependency type="visible" setting="subtitles.parsecaptions" operator="is">true</dependency>
-          </dependencies>
-          <control type="list" format="string" />
+        <setting id="accessibility.audiohearing" type="boolean" label="37036" help="37037">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle" />
         </setting>
+        <setting id="accessibility.subhearing" type="boolean" label="37038" help="37039">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+      </group>
+    </category>
+    <category id="subtitles" label="287" help="37033">
+      <group id="1" label="39186">
         <setting id="subtitles.align" type="integer" label="21460" help="36192">
           <level>2</level>
-          <default>1</default> <!-- SUBTITLE_ALIGN_BOTTOM_INSIDE -->
+          <default>2</default> <!-- Align::BOTTOM_OUTSIDE -->
           <constraints>
             <options>
-              <option label="21461">0</option> <!-- SUBTITLE_ALIGN_MANUAL -->
-              <option label="21462">1</option> <!-- SUBTITLE_ALIGN_BOTTOM_INSIDE -->
-              <option label="21463">2</option> <!-- SUBTITLE_ALIGN_BOTTOM_OUTSIDE -->
-              <option label="21464">3</option> <!-- SUBTITLE_ALIGN_TOP_INSIDE -->
-              <option label="21465">4</option> <!-- SUBTITLE_ALIGN_TOP_OUTSIDE -->
+              <option label="21461">0</option> <!-- Align::MANUAL -->
+              <option label="21462">1</option> <!-- Align::BOTTOM_INSIDE -->
+              <option label="21463">2</option> <!-- Align::BOTTOM_OUTSIDE -->
+              <option label="21464">3</option> <!-- Align::TOP_INSIDE -->
+              <option label="21465">4</option> <!-- Align::TOP_OUTSIDE -->
             </options>
           </constraints>
           <control type="list" format="string" />
-        </setting>
-        <setting id="subtitles.stereoscopicdepth" type="integer" label="36545" help="36546">
-          <level>2</level>
-          <default>0</default>
-          <constraints>
-            <minimum>0</minimum>
-            <step>1</step>
-            <maximum>10</maximum>
-          </constraints>
-          <control type="spinner" format="integer" delayed="true"/>
         </setting>
         <setting id="subtitles.fontname" type="string" label="14089" help="36185">
           <level>1</level>
@@ -525,17 +525,9 @@
           </constraints>
           <control type="list" format="string" />
         </setting>
-        <setting id="subtitles.charset" type="string" parent="subtitles.fontname" label="735" help="36189">
-          <level>1</level>
-          <default>DEFAULT</default>
-          <constraints>
-            <options>charsets</options>
-          </constraints>
-          <control type="list" format="string" />
-        </setting>
-        <setting id="subtitles.fontsize" type="integer" parent="subtitles.fontname" label="289" help="36186">
+        <setting id="subtitles.fontsize" type="integer" label="289" help="36186">
           <level>3</level>
-          <default>42</default>
+          <default>42</default> <!-- in pixels -->
           <constraints>
             <minimum>12</minimum>
             <step>2</step>
@@ -546,38 +538,38 @@
           </dependencies>
           <control type="list" format="string" />
         </setting>
-        <setting id="subtitles.style" type="integer" parent="subtitles.fontname" label="736" help="36187">
+        <setting id="subtitles.style" type="integer" label="736" help="36187">
           <level>3</level>
-          <default>0</default> <!-- FONT_STYLE_NORMAL -->
+          <default>0</default> <!-- FontStyle::NORMAL -->
           <constraints>
             <options>
-              <option label="738">0</option> <!-- FONT_STYLE_NORMAL -->
-              <option label="739">1</option> <!-- FONT_STYLE_BOLD -->
-              <option label="740">2</option> <!-- FONT_STYLE_ITALICS -->
-              <option label="741">3</option> <!-- FONT_STYLE_BOLD | FONT_STYLE_ITALICS -->
+              <option label="738">0</option> <!-- FontStyle::NORMAL -->
+              <option label="739">1</option> <!-- FontStyle::BOLD -->
+              <option label="740">2</option> <!-- FontStyle::ITALIC -->
+              <option label="741">3</option> <!-- FontStyle::BOLD_ITALIC -->
             </options>
           </constraints>
           <control type="list" format="string" />
         </setting>
-        <setting id="subtitles.colorpick" type="string" parent="subtitles.fontname" label="737" help="36188">
+        <setting id="subtitles.colorpick" type="string" label="737" help="36188">
           <level>3</level>
           <default>FFFFFFFF</default> <!-- White -->
           <control type="colorbutton" />
         </setting>
-        <setting id="subtitles.opacity" type="integer" parent="subtitles.fontname" label="752" help="36295">
+        <setting id="subtitles.opacity" type="integer" label="752" help="36295">
           <level>3</level>
           <default>100</default>
           <control type="slider" format="percentage" range="0,100" />
         </setting>
-        <setting id="subtitles.bordersize" type="integer" parent="subtitles.fontname" label="39159">
+        <setting id="subtitles.bordersize" type="integer" label="39159">
           <level>3</level>
-          <default>30</default>
+          <default>25</default>
           <dependencies>
             <dependency type="enable" setting="subtitles.backgroundtype" operator="!is">2</dependency>
           </dependencies>
           <control type="slider" format="percentage" range="0,100" />
         </setting>
-        <setting id="subtitles.bordercolorpick" type="string" parent="subtitles.fontname" label="39160">
+        <setting id="subtitles.bordercolorpick" type="string" label="39160">
           <level>3</level>
           <default>FF000000</default> <!-- Black -->
           <dependencies>
@@ -585,20 +577,20 @@
           </dependencies>
           <control type="colorbutton" />
         </setting>
-        <setting id="subtitles.blur" type="integer" parent="subtitles.fontname" label="39173">
+        <setting id="subtitles.blur" type="integer" label="39173">
           <level>3</level>
           <default>0</default>
           <control type="slider" format="percentage" range="0,100" />
         </setting>
-        <setting id="subtitles.backgroundtype" type="integer" parent="subtitles.fontname" label="39165" help="39169">
+        <setting id="subtitles.backgroundtype" type="integer" label="39165" help="39169">
           <level>3</level>
-          <default>0</default>
+          <default>0</default> <!-- BackgroundType::NONE -->
           <constraints>
             <options>
-              <option label="231">0</option> <!-- SUBTITLE_BACKGROUNDTYPE_NONE -->
-              <option label="39166">1</option> <!-- SUBTITLE_BACKGROUNDTYPE_SHADOW -->
-              <option label="39167">2</option> <!-- SUBTITLE_BACKGROUNDTYPE_BOX -->
-              <option label="39168">3</option> <!-- SUBTITLE_BACKGROUNDTYPE_SQUAREBOX -->
+              <option label="39188">0</option> <!-- BackgroundType::NONE -->
+              <option label="39166">1</option> <!-- BackgroundType::SHADOW -->
+              <option label="39167">2</option> <!-- BackgroundType::BOX -->
+              <option label="39168">3</option> <!-- BackgroundType::SQUAREBOX -->
             </options>
           </constraints>
           <control type="list" format="integer" />
@@ -668,6 +660,21 @@
           </dependencies>
           <control type="slider" format="percentage" range="0,100" />
         </setting>
+        <setting id="subtitles.marginvertical" type="number" label="39182" help="39183">
+          <level>3</level>
+          <default>4.95</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>0.05</step>
+            <maximum>50</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" on="property" operator="!is" name="isplaying" />
+          </dependencies>
+          <control type="slider" format="percentage">
+            <format>{:.2f} %</format>
+          </control>
+        </setting>
         <setting id="subtitles.overridefonts" type="boolean" label="21368" help="36190">
           <level>3</level>
           <default>false</default>
@@ -692,8 +699,48 @@
           </dependencies>
           <control type="list" format="string" />
         </setting>
+        <setting id="subtitles.stereoscopicdepth" type="integer" label="36545" help="36546">
+          <level>2</level>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>10</maximum>
+          </constraints>
+          <control type="spinner" format="integer" delayed="true"/>
+        </setting>
+        <setting id="subtitles.charset" type="string" label="735" help="36189">
+          <level>1</level>
+          <default>DEFAULT</default>
+          <constraints>
+            <options>charsets</options>
+          </constraints>
+          <control type="list" format="string" />
+        </setting>
       </group>
-      <group id="3" label="14235">
+      <group id="3" label="39187">
+        <setting id="subtitles.parsecaptions" type="boolean" label="24130" help="24131">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="subtitles.captionsalign" parent="subtitles.parsecaptions" type="integer" label="39161">
+          <level>2</level>
+          <default>0</default> <!-- HorizontalAlign::LEFT -->
+          <constraints>
+            <options>
+              <option label="39162">0</option> <!-- HorizontalAlign::LEFT -->
+              <option label="39163">1</option> <!-- HorizontalAlign::CENTER -->
+              <option label="39164">2</option> <!-- HorizontalAlign::RIGHT -->
+            </options>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="subtitles.parsecaptions" operator="is">true</dependency>
+          </dependencies>
+          <control type="list" format="string" />
+        </setting>
+      </group>
+      <group id="4" label="14235">
         <setting id="subtitles.languages" type="list[string]" label="24111" help="24112">
           <level>1</level>
           <default>English</default>
@@ -762,27 +809,6 @@
           <control type="button" format="addon">
             <show more="true" details="true">installed</show>
           </control>
-        </setting>
-      </group>
-    </category>
-    <category id="accessibility" label="37032" help="37033">
-      <group id="1" label="14221">
-        <setting id="accessibility.audiovisual" type="boolean" label="37034" help="37035">
-          <level>0</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-        <setting id="accessibility.audiohearing" type="boolean" label="37036" help="37037">
-          <level>0</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-      </group>
-      <group id="2" label="24012">
-        <setting id="accessibility.subhearing" type="boolean" label="37038" help="37039">
-          <level>0</level>
-          <default>false</default>
-          <control type="toggle" />
         </setting>
       </group>
     </category>
@@ -1067,6 +1093,12 @@
           <default></default>
           <constraints>
             <allowempty>true</allowempty>
+            <sources>
+                <source>files</source>
+                <source>pictures</source>
+                <source>videos</source>
+            </sources>
+            <writable>false</writable>
           </constraints>
           <control type="button" format="path">
             <heading>657</heading>
@@ -1515,12 +1547,28 @@
   </section>
   <section id="pvr" label="14204" help="36201">
     <category id="pvrmanager" label="128" help="36202">
-      <group id="1" label="14301">
-        <setting id="pvrmanager.preselectplayingchannel" type="boolean" label="19269" help="36214">
+      <group id="1" label="19279">
+        <setting id="pvrclient.menuhook" type="action" label="19280" help="36252">
           <level>1</level>
-          <default>false</default>
-          <control type="toggle" />
+          <control type="button" format="action" />
         </setting>
+        <setting id="pvrmanager.clientpriorities" type="action" label="19240" help="36210">
+          <level>2</level>
+          <dependencies>
+            <dependency type="visible" on="property" name="pvrsettingvisible" setting="pvrmanager.clientpriorities" operator="is">true</dependency>
+          </dependencies>
+          <control type="button" format="action" />
+        </setting>
+      </group>
+      <group id="2" label="14303">
+        <setting id="pvrmanager.resetdb" type="action" label="19185" help="36209">
+          <level>1</level>
+          <control type="button" format="action" />
+        </setting>
+      </group>
+    </category>
+    <category id="pvrmenu" label="14301" help="36211">
+      <group id="1" label="128">
         <setting id="pvrmanager.syncchannelgroups" type="boolean" label="19221" help="36204">
           <level>1</level>
           <default>true</default>
@@ -1561,13 +1609,6 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
-        <setting id="pvrmanager.clientpriorities" type="action" label="19240" help="36210">
-          <level>2</level>
-          <dependencies>
-            <dependency type="visible" on="property" name="pvrsettingvisible" setting="pvrmanager.clientpriorities" operator="is">true</dependency>
-          </dependencies>
-          <control type="button" format="action" />
-        </setting>
         <setting id="pvrmanager.channelmanager" type="action" label="19199" help="36207">
           <level>1</level>
           <control type="button" format="action" />
@@ -1579,31 +1620,6 @@
         <setting id="pvrmanager.channelscan" type="action" label="19117" help="36208">
           <level>1</level>
           <control type="button" format="action" />
-        </setting>
-        <setting id="pvrmanager.resetdb" type="action" label="19185" help="36209">
-          <level>1</level>
-          <control type="button" format="action" />
-        </setting>
-      </group>
-    </category>
-    <category id="pvrmenu" label="19181" help="36211">
-      <group id="1" label="14301">
-        <setting id="pvrmenu.displaychannelinfo" type="integer" label="19178" help="36212">
-          <level>2</level>
-          <default>5</default>
-          <constraints>
-            <minimum label="351">0</minimum>
-            <step>1</step>
-            <maximum>15</maximum>
-          </constraints>
-          <control type="spinner" format="string">
-            <formatlabel>14045</formatlabel>
-          </control>
-        </setting>
-        <setting id="pvrmenu.closechannelosdonswitch" type="boolean" label="19303" help="36235">
-          <level>2</level>
-          <default>true</default>
-          <control type="toggle" />
         </setting>
       </group>
       <group id="2" label="14302">
@@ -1619,7 +1635,7 @@
           </control>
         </setting>
         <setting id="pvrmenu.searchicons" type="action" label="19167" help="36217">
-          <level>1</level>
+          <level>2</level>
           <dependencies>
             <dependency type="enable">
               <and>
@@ -1716,7 +1732,24 @@
           </constraints>
           <control type="list" format="string" />
         </setting>
-        <setting id="pvrplayback.signalquality" type="boolean" label="19037" help="36229">
+        <setting id="pvrmanager.preselectplayingchannel" type="boolean" label="19269" help="36214">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="pvrmenu.displaychannelinfo" type="integer" label="19178" help="36212">
+          <level>2</level>
+          <default>5</default>
+          <constraints>
+            <minimum label="351">0</minimum>
+            <step>1</step>
+            <maximum>15</maximum>
+          </constraints>
+          <control type="spinner" format="string">
+            <formatlabel>14045</formatlabel>
+          </control>
+        </setting>
+        <setting id="pvrmenu.closechannelosdonswitch" type="boolean" label="19303" help="36235">
           <level>2</level>
           <default>true</default>
           <control type="toggle" />
@@ -1749,6 +1782,11 @@
           <control type="spinner" format="string">
             <formatlabel>14045</formatlabel>
           </control>
+        </setting>
+        <setting id="pvrplayback.signalquality" type="boolean" label="19037" help="36229">
+          <level>2</level>
+          <default>true</default>
+          <control type="toggle" />
         </setting>
         <setting id="pvrplayback.fps" type="integer" label="19108" help="36261">
           <level>0</level>
@@ -1980,12 +2018,6 @@
       </group>
     </category>
     <category id="pvrclient" label="19279" help="36251">
-      <group id="1" label="128">
-        <setting id="pvrclient.menuhook" type="action" label="19280" help="36252">
-          <level>1</level>
-          <control type="button" format="action" />
-        </setting>
-      </group>
     </category>
     <category id="pvrtimers" label="" help="">
       <group id="1">
@@ -2342,6 +2374,21 @@
           <level>2</level>
           <default>true</default>
           <control type="toggle" />
+        </setting>
+      </group>
+    </category>
+    <category id="nfs" label="1201" help="36356">
+      <requirement>HAS_FILESYSTEM_NFS</requirement>
+      <group id="1" label="16000">
+        <setting id="nfs.version" type="integer" label="37051" help="37052">
+          <level>2</level>
+          <default>3</default>
+          <constraints>
+            <minimum>3</minimum>
+            <step>1</step>
+            <maximum>4</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
         </setting>
       </group>
     </category>
@@ -2965,6 +3012,11 @@
             </options>
           </constraints>
           <control type="list" format="string" />
+        </setting>
+        <setting id="audiooutput.guisoundvolume" type="integer" label="13376" help="39176">
+          <level>1</level>
+          <default>100</default>
+          <control type="slider" format="percentage" range="0,100" />
         </setting>
         <setting id="lookandfeel.soundskin" type="addon" label="24006" help="36110">
           <level>0</level>
@@ -3700,31 +3752,6 @@
           <control type="button" format="action">
             <hidevalue>true</hidevalue>
           </control>
-        </setting>
-      </group>
-    </category>
-    <category id="osd" label="478" help="39175">
-      <group id="1" label="157">
-        <setting id="osd.autoclosevideoosd" type="boolean" label="39176" help="39177">
-          <level>0</level>
-          <default>true</default>
-          <control type="toggle" />
-          <dependencies>
-            <dependency type="enable" on="property" operator="!is" name="isplaying" />
-          </dependencies>
-        </setting>
-        <setting id="osd.autoclosevideoosdtime" type="integer" parent="osd.autoclosevideoosd" label="39178" help="39179">
-          <level>2</level>
-          <default>5</default>
-          <constraints>
-            <minimum>2</minimum>
-            <step>1</step>
-            <maximum>60</maximum>
-          </constraints>
-          <dependencies>
-            <dependency type="visible" setting="osd.autoclosevideoosd">true</dependency>
-          </dependencies>
-          <control type="slider" format="integer" />
         </setting>
       </group>
     </category>

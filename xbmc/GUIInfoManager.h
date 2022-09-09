@@ -77,6 +77,13 @@ public:
    */
   INFO::InfoPtr Register(const std::string &expression, int context = 0);
 
+  /*! \brief Unregister a boolean condition/expression
+   * This routine allows controls or other clients of the info manager to unregister a previously registered
+   * boolean condition/expression
+   \param expression the boolean condition or expression
+   */
+  void UnRegister(const INFO::InfoPtr& expression);
+
   /// \brief iterates through boolean conditions and compares their stored values to current values. Returns true if any condition changed value.
   bool ConditionsChangedValues(const std::map<INFO::InfoPtr, bool>& map);
 
@@ -86,15 +93,17 @@ public:
    \return the value of the evaluated expression.
    \sa Register
    */
-  bool EvaluateBool(const std::string &expression, int context = 0, const CGUIListItemPtr &item = nullptr);
+  bool EvaluateBool(const std::string& expression,
+                    int context,
+                    const CGUIListItemPtr& item = nullptr);
 
   int TranslateString(const std::string &strCondition);
   int TranslateSingleString(const std::string &strCondition, bool &listItemDependent);
 
-  std::string GetLabel(int info, int contextWindow = 0, std::string *fallback = nullptr) const;
+  std::string GetLabel(int info, int contextWindow, std::string* fallback = nullptr) const;
   std::string GetImage(int info, int contextWindow, std::string *fallback = nullptr);
-  bool GetInt(int &value, int info, int contextWindow = 0, const CGUIListItem *item = nullptr) const;
-  bool GetBool(int condition, int contextWindow = 0, const CGUIListItem *item = nullptr);
+  bool GetInt(int& value, int info, int contextWindow, const CGUIListItem* item = nullptr) const;
+  bool GetBool(int condition, int contextWindow, const CGUIListItem* item = nullptr);
 
   std::string GetItemLabel(const CFileItem *item, int contextWindow, int info, std::string *fallback = nullptr) const;
   std::string GetItemImage(const CGUIListItem *item, int contextWindow, int info, std::string *fallback = nullptr) const;
@@ -184,7 +193,10 @@ private:
   std::string GetMultiInfoItemLabel(const CFileItem *item, int contextWindow, const KODI::GUILIB::GUIINFO::CGUIInfo &info, std::string *fallback = nullptr) const;
   std::string GetMultiInfoItemImage(const CFileItem *item, int contextWindow, const KODI::GUILIB::GUIINFO::CGUIInfo &info, std::string *fallback = nullptr) const;
 
-  std::string GetSkinVariableString(int info, bool preferImage = false, const CGUIListItem *item = nullptr) const;
+  std::string GetSkinVariableString(int info,
+                                    int contextWindow,
+                                    bool preferImage = false,
+                                    const CGUIListItem* item = nullptr) const;
 
   int AddMultiInfo(const KODI::GUILIB::GUIINFO::CGUIInfo &info);
 

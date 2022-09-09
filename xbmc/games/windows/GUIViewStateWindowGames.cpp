@@ -66,8 +66,7 @@ std::string CGUIViewStateWindowGames::GetExtensions()
   std::set<std::string> exts = CGameUtils::GetGameExtensions();
 
   // Ensure .zip appears
-  if (exts.find(".zip") == exts.end())
-    exts.insert(".zip");
+  exts.insert(".zip");
 
   return StringUtils::Join(exts, "|");
 }
@@ -82,12 +81,6 @@ VECSOURCES& CGUIViewStateWindowGames::GetSources()
     static VECSOURCES empty;
     return empty;
   }
-
-  // Game add-ons
-  AddAddonsSource("game", g_localizeStrings.Get(35049), "DefaultAddonGame.png");
-
-  // Global sources
-  AddOrReplace(*pGameSources, CGUIViewState::GetSources());
 
   return *pGameSources;
 }

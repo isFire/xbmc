@@ -44,6 +44,7 @@ namespace XBMCAddon
       params.emplace_back(id);
       params.push_back(value);
       message.SetStringParams(params);
+      message.SetParam1(ADDON_SETTINGS_ID);
       CServiceBroker::GetGUI()->GetWindowManager().SendThreadMessage(message, WINDOW_DIALOG_ADDON_SETTINGS);
 
       return true;
@@ -63,7 +64,7 @@ namespace XBMCAddon
         throw AddonException("No valid addon id could be obtained. None was passed and the script "
                              "wasn't executed in a normal Kodi manner.");
 
-      if (!CServiceBroker::GetAddonMgr().GetAddon(id.c_str(), pAddon, ADDON_UNKNOWN,
+      if (!CServiceBroker::GetAddonMgr().GetAddon(id, pAddon, ADDON_UNKNOWN,
                                                   OnlyEnabled::CHOICE_YES))
         throw AddonException("Unknown addon id '%s'.", id.c_str());
 

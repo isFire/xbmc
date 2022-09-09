@@ -19,12 +19,10 @@
 #include "cores/VideoPlayer/DVDCodecs/Overlay/DVDOverlaySpu.h"
 #include "cores/VideoPlayer/DVDCodecs/Overlay/DVDOverlayText.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
-#include "guilib/GUIFont.h"
-#include "settings/AdvancedSettings.h"
+#include "settings/DisplaySettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
-#include "settings/SubtitlesSettings.h"
-#include "utils/ColorUtils.h"
+#include "settings/lib/Setting.h"
 #include "windowing/GraphicContext.h"
 
 #include <mutex>
@@ -36,6 +34,7 @@
 
 #include <algorithm>
 
+using namespace KODI;
 using namespace OVERLAY;
 
 COverlay::COverlay()
@@ -55,12 +54,12 @@ unsigned int CRenderer::m_textureid = 1;
 
 CRenderer::CRenderer()
 {
-  KODI::SUBTITLES::CSubtitlesSettings::GetInstance().RegisterObserver(this);
+  CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()->RegisterObserver(this);
 }
 
 CRenderer::~CRenderer()
 {
-  KODI::SUBTITLES::CSubtitlesSettings::GetInstance().UnregisterObserver(this);
+  CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()->UnregisterObserver(this);
   Flush();
 }
 
@@ -86,6 +85,18 @@ void CRenderer::Release(std::vector<SElement>& list)
   }
 }
 
+void CRenderer::UnInit()
+{
+  if (m_saveSubtitlePosition)
+  {
+    m_saveSubtitlePosition = false;
+    CDisplaySettings::GetInstance().UpdateCalibrations();
+    CServiceBroker::GetSettingsComponent()->GetSettings()->Save();
+  }
+
+  Flush();
+}
+
 void CRenderer::Flush()
 {
   std::unique_lock<CCriticalSection> lock(m_section);
@@ -94,6 +105,13 @@ void CRenderer::Flush()
     Release(buffer);
 
   ReleaseCache();
+  Reset();
+}
+
+void CRenderer::Reset()
+{
+  m_subtitlePosition = 0;
+  m_subtitlePosResInfo = -1;
 }
 
 void CRenderer::Release(int idx)
@@ -218,10 +236,9 @@ void CRenderer::Render(COverlay* o)
     {
       if (align == COverlay::ALIGN_SUBTITLE)
       {
-        RESOLUTION_INFO res = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(
-            CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution());
+        RESOLUTION_INFO resInfo = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
         state.x += m_rv.x1 + m_rv.Width() * 0.5f;
-        state.y += m_rv.y1 + (res.iSubtitles - res.Overscan.top);
+        state.y += m_rv.y1 + (resInfo.iSubtitles - resInfo.Overscan.top);
       }
       else
       {
@@ -269,9 +286,18 @@ bool CRenderer::HasOverlay(int idx)
 
 void CRenderer::SetVideoRect(CRect &source, CRect &dest, CRect &view)
 {
+  if (m_rv != view) // Screen resolution is changed
+  {
+    m_rv = view;
+    OnViewChange();
+  }
   m_rs = source;
   m_rd = dest;
-  m_rv = view;
+}
+
+void CRenderer::OnViewChange()
+{
+  m_isSettingsChanged = true;
 }
 
 void CRenderer::SetStereoMode(const std::string &stereomode)
@@ -279,85 +305,126 @@ void CRenderer::SetStereoMode(const std::string &stereomode)
   m_stereomode = stereomode;
 }
 
+void CRenderer::SetSubtitleVerticalPosition(const int value, bool save)
+{
+  std::unique_lock<CCriticalSection> lock(m_section);
+  m_subtitlePosition = value;
+
+  if (save && m_subtitleAlign == SUBTITLES::Align::MANUAL)
+  {
+    m_subtitlePosResInfo = POSRESINFO_SAVE_CHANGES;
+    // We save the value to XML file settings when playback is stopped
+    // to avoid saving to disk too many times
+    m_saveSubtitlePosition = true;
+  }
+}
+
+void CRenderer::ResetSubtitlePosition()
+{
+  // In the 'pos' var the vertical margin has been substracted because
+  // we need to know the actual text baseline position on screen
+  int pos{0};
+  m_saveSubtitlePosition = false;
+  RESOLUTION_INFO resInfo = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
+
+  if (m_subtitleAlign == SUBTITLES::Align::MANUAL)
+  {
+    // The position must be fixed to match the subtitle calibration bar
+    m_subtitleVerticalMargin = static_cast<int>(
+        static_cast<float>(resInfo.iHeight) / 100 *
+        CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()->GetVerticalMarginPerc());
+
+    m_subtitlePosResInfo = resInfo.iSubtitles;
+    pos = resInfo.iSubtitles - m_subtitleVerticalMargin;
+  }
+  else
+  {
+    // The position must be relative to the screen frame
+    m_subtitleVerticalMargin = static_cast<int>(
+        static_cast<float>(m_rv.Height()) / 100 *
+        CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()->GetVerticalMarginPerc());
+
+    m_subtitlePosResInfo = static_cast<int>(m_rv.Height());
+    pos = static_cast<int>(m_rv.Height()) - m_subtitleVerticalMargin + resInfo.Overscan.top;
+  }
+
+  // Update player value (and callback to CRenderer::SetSubtitleVerticalPosition)
+  g_application.GetAppPlayer().SetSubtitleVerticalPosition(pos, false);
+}
+
 void CRenderer::CreateSubtitlesStyle()
 {
-  m_overlayStyle = std::make_shared<KODI::SUBTITLES::style>();
-  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  m_overlayStyle = std::make_shared<SUBTITLES::STYLE::style>();
+  const auto settings{CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()};
 
-  m_overlayStyle->fontName = settings->GetString(CSettings::SETTING_SUBTITLES_FONTNAME);
-  m_overlayStyle->fontSize = (double)settings->GetInt(CSettings::SETTING_SUBTITLES_FONTSIZE);
+  m_overlayStyle->fontName = settings->GetFontName();
+  m_overlayStyle->fontSize = static_cast<double>(settings->GetFontSize());
 
-  uint32_t fontStyleMask = settings->GetInt(CSettings::SETTING_SUBTITLES_STYLE) & FONT_STYLE_MASK;
-  if ((fontStyleMask & FONT_STYLE_BOLD) && (fontStyleMask & FONT_STYLE_ITALICS))
-    m_overlayStyle->fontStyle = KODI::SUBTITLES::FontStyle::BOLD_ITALIC;
-  else if (fontStyleMask & FONT_STYLE_BOLD)
-    m_overlayStyle->fontStyle = KODI::SUBTITLES::FontStyle::BOLD;
-  else if (fontStyleMask & FONT_STYLE_ITALICS)
-    m_overlayStyle->fontStyle = KODI::SUBTITLES::FontStyle::ITALIC;
+  SUBTITLES::FontStyle fontStyle = settings->GetFontStyle();
+  if (fontStyle == SUBTITLES::FontStyle::BOLD_ITALIC)
+    m_overlayStyle->fontStyle = SUBTITLES::STYLE::FontStyle::BOLD_ITALIC;
+  else if (fontStyle == SUBTITLES::FontStyle::BOLD)
+    m_overlayStyle->fontStyle = SUBTITLES::STYLE::FontStyle::BOLD;
+  else if (fontStyle == SUBTITLES::FontStyle::ITALIC)
+    m_overlayStyle->fontStyle = SUBTITLES::STYLE::FontStyle::ITALIC;
 
-  m_overlayStyle->fontColor =
-      UTILS::COLOR::ConvertHexToColor(settings->GetString(CSettings::SETTING_SUBTITLES_COLOR));
-  m_overlayStyle->fontBorderSize = settings->GetInt(CSettings::SETTING_SUBTITLES_BORDERSIZE);
-  m_overlayStyle->fontBorderColor = UTILS::COLOR::ConvertHexToColor(
-      settings->GetString(CSettings::SETTING_SUBTITLES_BORDERCOLOR));
-  m_overlayStyle->fontOpacity = settings->GetInt(CSettings::SETTING_SUBTITLES_OPACITY);
+  m_overlayStyle->fontColor = settings->GetFontColor();
+  m_overlayStyle->fontBorderSize = settings->GetBorderSize();
+  m_overlayStyle->fontBorderColor = settings->GetBorderColor();
+  m_overlayStyle->fontOpacity = settings->GetFontOpacity();
 
-  int backgroundType = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-      CSettings::SETTING_SUBTITLES_BACKGROUNDTYPE);
-  if (backgroundType == SUBTITLE_BACKGROUNDTYPE_NONE)
-    m_overlayStyle->borderStyle = KODI::SUBTITLES::BorderStyle::OUTLINE_NO_SHADOW;
-  else if (backgroundType == SUBTITLE_BACKGROUNDTYPE_SHADOW)
-    m_overlayStyle->borderStyle = KODI::SUBTITLES::BorderStyle::OUTLINE;
-  else if (backgroundType == SUBTITLE_BACKGROUNDTYPE_BOX)
-    m_overlayStyle->borderStyle = KODI::SUBTITLES::BorderStyle::BOX;
-  else if (backgroundType == SUBTITLE_BACKGROUNDTYPE_SQUAREBOX)
-    m_overlayStyle->borderStyle = KODI::SUBTITLES::BorderStyle::SQUARE_BOX;
+  SUBTITLES::BackgroundType backgroundType = settings->GetBackgroundType();
+  if (backgroundType == SUBTITLES::BackgroundType::NONE)
+    m_overlayStyle->borderStyle = SUBTITLES::STYLE::BorderType::OUTLINE_NO_SHADOW;
+  else if (backgroundType == SUBTITLES::BackgroundType::SHADOW)
+    m_overlayStyle->borderStyle = SUBTITLES::STYLE::BorderType::OUTLINE;
+  else if (backgroundType == SUBTITLES::BackgroundType::BOX)
+    m_overlayStyle->borderStyle = SUBTITLES::STYLE::BorderType::BOX;
+  else if (backgroundType == SUBTITLES::BackgroundType::SQUAREBOX)
+    m_overlayStyle->borderStyle = SUBTITLES::STYLE::BorderType::SQUARE_BOX;
 
-  m_overlayStyle->backgroundColor =
-      UTILS::COLOR::ConvertHexToColor(settings->GetString(CSettings::SETTING_SUBTITLES_BGCOLOR));
-  m_overlayStyle->backgroundOpacity = settings->GetInt(CSettings::SETTING_SUBTITLES_BGOPACITY);
+  m_overlayStyle->backgroundColor = settings->GetBackgroundColor();
+  m_overlayStyle->backgroundOpacity = settings->GetBackgroundOpacity();
 
-  m_overlayStyle->shadowColor = UTILS::COLOR::ConvertHexToColor(
-      settings->GetString(CSettings::SETTING_SUBTITLES_SHADOWCOLOR));
-  m_overlayStyle->shadowOpacity = settings->GetInt(CSettings::SETTING_SUBTITLES_SHADOWOPACITY);
-  m_overlayStyle->shadowSize = settings->GetInt(CSettings::SETTING_SUBTITLES_SHADOWSIZE);
+  m_overlayStyle->shadowColor = settings->GetShadowColor();
+  m_overlayStyle->shadowOpacity = settings->GetShadowOpacity();
+  m_overlayStyle->shadowSize = settings->GetShadowSize();
 
-  int subAlign = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-      CSettings::SETTING_SUBTITLES_ALIGN);
-  if (subAlign == SUBTITLE_ALIGN_TOP_INSIDE || subAlign == SUBTITLE_ALIGN_TOP_OUTSIDE)
-    m_overlayStyle->alignment = KODI::SUBTITLES::FontAlignment::TOP_CENTER;
+  SUBTITLES::Align subAlign = settings->GetAlignment();
+  if (subAlign == SUBTITLES::Align::TOP_INSIDE || subAlign == SUBTITLES::Align::TOP_OUTSIDE)
+    m_overlayStyle->alignment = SUBTITLES::STYLE::FontAlign::TOP_CENTER;
   else
-    m_overlayStyle->alignment = KODI::SUBTITLES::FontAlignment::SUB_CENTER;
+    m_overlayStyle->alignment = SUBTITLES::STYLE::FontAlign::SUB_CENTER;
 
-  if (subAlign == SUBTITLE_ALIGN_BOTTOM_OUTSIDE || subAlign == SUBTITLE_ALIGN_TOP_OUTSIDE)
-    m_overlayStyle->drawWithinBlackBars = true;
+  m_overlayStyle->assOverrideFont = settings->IsOverrideFonts();
 
-  m_overlayStyle->assOverrideFont = settings->GetBool(CSettings::SETTING_SUBTITLES_OVERRIDEFONTS);
-
-  int overrideStyles = settings->GetInt(CSettings::SETTING_SUBTITLES_OVERRIDESTYLES);
-  if (overrideStyles == (int)KODI::SUBTITLES::OverrideStyles::POSITIONS ||
-      overrideStyles == (int)KODI::SUBTITLES::OverrideStyles::STYLES ||
-      overrideStyles == (int)KODI::SUBTITLES::OverrideStyles::STYLES_POSITIONS)
-    m_overlayStyle->assOverrideStyles =
-        static_cast<KODI::SUBTITLES::OverrideStyles>(overrideStyles);
+  SUBTITLES::OverrideStyles overrideStyles = settings->GetOverrideStyles();
+  if (overrideStyles == SUBTITLES::OverrideStyles::POSITIONS)
+    m_overlayStyle->assOverrideStyles = SUBTITLES::STYLE::OverrideStyles::POSITIONS;
+  else if (overrideStyles == SUBTITLES::OverrideStyles::STYLES)
+    m_overlayStyle->assOverrideStyles = SUBTITLES::STYLE::OverrideStyles::STYLES;
+  else if (overrideStyles == SUBTITLES::OverrideStyles::STYLES_POSITIONS)
+    m_overlayStyle->assOverrideStyles = SUBTITLES::STYLE::OverrideStyles::STYLES_POSITIONS;
   else
-    m_overlayStyle->assOverrideStyles = KODI::SUBTITLES::OverrideStyles::DISABLED;
+    m_overlayStyle->assOverrideStyles = SUBTITLES::STYLE::OverrideStyles::DISABLED;
 
-  int overrideMerginVertical =
-      CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_videoSubtitleVerticalMargin;
-  if (overrideMerginVertical >= 0 && overrideMerginVertical < m_rv.Height())
-    m_overlayStyle->marginVertical = overrideMerginVertical;
+  // Changing vertical margin while in playback causes side effects when you
+  // rewind the video, displaying the previous text position (test Libass 15.2)
+  // for now vertical margin setting will be disabled during playback
+  m_overlayStyle->marginVertical =
+      static_cast<int>(SUBTITLES::STYLE::VIEWPORT_HEIGHT / 100 *
+                       static_cast<double>(settings->GetVerticalMarginPerc()));
 
-  m_overlayStyle->blur = settings->GetInt(CSettings::SETTING_SUBTITLES_BLUR);
+  m_overlayStyle->blur = settings->GetBlurSize();
 }
 
 COverlay* CRenderer::ConvertLibass(
     CDVDOverlayLibass* o,
     double pts,
     bool updateStyle,
-    const std::shared_ptr<struct KODI::SUBTITLES::style>& overlayStyle)
+    const std::shared_ptr<struct SUBTITLES::STYLE::style>& overlayStyle)
 {
-  KODI::SUBTITLES::renderOpts rOpts;
+  SUBTITLES::STYLE::renderOpts rOpts;
 
   // libass render in a target area which named as frame. the frame size may bigger than video size,
   // and including margins between video to frame edge. libass allow to render subtitles into the margins.
@@ -383,49 +450,79 @@ COverlay* CRenderer::ConvertLibass(
       rOpts.sourceHeight = m_rs.Height() * 2;
   }
 
-  int subAlign = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-      CSettings::SETTING_SUBTITLES_ALIGN);
-
   // Set position of subtitles based on video calibration settings
-  if (subAlign == SUBTITLE_ALIGN_MANUAL)
+  RESOLUTION_INFO resInfo = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
+  // Keep track of subtitle position value change,
+  // can be changed by GUI Calibration or by window mode/resolution change or
+  // by user manual change (e.g. keyboard shortcut)
+  if (m_subtitlePosResInfo != resInfo.iSubtitles)
   {
-    if (o->IsForcedMargins())
+    if (m_subtitlePosResInfo == POSRESINFO_SAVE_CHANGES)
     {
-      // rOpts.position can invalidate the text positions to subtitles that make
-      // use of margins to position text on the screen then in this case
-      // we allow to set it only when position overrides are enabled
-      int overrideStyles = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-          CSettings::SETTING_SUBTITLES_OVERRIDESTYLES);
-      if (overrideStyles == (int)KODI::SUBTITLES::OverrideStyles::POSITIONS ||
-          overrideStyles == (int)KODI::SUBTITLES::OverrideStyles::STYLES_POSITIONS)
-        rOpts.usePosition = true;
+      // m_subtitlePosition has been changed
+      // and has been requested to save the value to resInfo
+      resInfo.iSubtitles = m_subtitlePosition + m_subtitleVerticalMargin;
+      CServiceBroker::GetWinSystem()->GetGfxContext().SetResInfo(
+          CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution(), resInfo);
+      m_subtitlePosResInfo = m_subtitlePosition + m_subtitleVerticalMargin;
     }
     else
-    {
-      rOpts.usePosition = true;
-    }
-    if (rOpts.usePosition)
-    {
-      RESOLUTION_INFO res;
-      res = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(
-          CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution());
-      rOpts.position =
-          100.0 - static_cast<double>(res.iSubtitles - res.Overscan.top) * 100 / res.iHeight;
-    }
+      ResetSubtitlePosition();
+  }
+
+  rOpts.m_par = resInfo.fPixelRatio;
+
+  // rOpts.position and margins (set to style) can invalidate the text
+  // positions to subtitles type that make use of margins to position text on
+  // the screen (e.g. ASS/WebVTT) then we allow to set them when position
+  // override setting is enabled only
+  if (o->IsForcedMargins())
+  {
+    rOpts.marginsMode = SUBTITLES::STYLE::MarginsMode::DISABLED;
+  }
+  else if (m_subtitleAlign == SUBTITLES::Align::MANUAL)
+  {
+    // When vertical margins are used Libass apply a displacement in percentage
+    // of the height available to line position, this displacement causes
+    // problems with subtitle calibration bar on Video Calibration window,
+    // so when you moving the subtitle bar of the GUI the text will no longer
+    // match the bar, this calculation compensates for the displacement.
+    // Note also that the displacement compensation will cause a different
+    // default position of the text, different from the other alignment positions
+    double posPx = static_cast<double>(m_subtitlePosition - resInfo.Overscan.top);
+
+    int assPlayResY = o->GetLibassHandler()->GetPlayResY();
+    double assVertMargin = static_cast<double>(overlayStyle->marginVertical) *
+                           (static_cast<double>(assPlayResY) / 720);
+    double vertMarginScaled = assVertMargin / assPlayResY * static_cast<double>(rOpts.frameHeight);
+
+    double pos = posPx / (static_cast<double>(rOpts.frameHeight) - vertMarginScaled);
+    rOpts.position = 100 - pos * 100;
+  }
+  else if (m_subtitleAlign == SUBTITLES::Align::BOTTOM_OUTSIDE)
+  {
+    // To keep consistent the position of text as other alignment positions
+    // we avoid apply the displacement compensation
+    double posPx =
+        static_cast<double>(m_subtitlePosition + m_subtitleVerticalMargin - resInfo.Overscan.top);
+    rOpts.position = 100 - posPx / static_cast<double>(rOpts.frameHeight) * 100;
+  }
+  else if (m_subtitleAlign == SUBTITLES::Align::BOTTOM_INSIDE ||
+           m_subtitleAlign == SUBTITLES::Align::TOP_INSIDE)
+  {
+    rOpts.marginsMode = SUBTITLES::STYLE::MarginsMode::INSIDE_VIDEO;
   }
 
   // Set the horizontal text alignment (currently used to improve readability on CC subtitles only)
   // This setting influence style->alignment property
   if (o->IsTextAlignEnabled())
   {
-    int subTextAlign = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-        CSettings::SETTING_SUBTITLES_CAPTIONSALIGN);
-    if (subTextAlign == SUBTITLE_HORIZONTAL_ALIGN_LEFT)
-      rOpts.horizontalAlignment = KODI::SUBTITLES::HorizontalAlignment::LEFT;
-    else if (subTextAlign == SUBTITLE_HORIZONTAL_ALIGN_RIGHT)
-      rOpts.horizontalAlignment = KODI::SUBTITLES::HorizontalAlignment::RIGHT;
+    if (m_subtitleHorizontalAlign == SUBTITLES::HorizontalAlign::LEFT)
+      rOpts.horizontalAlignment = SUBTITLES::STYLE::HorizontalAlign::LEFT;
+    else if (m_subtitleHorizontalAlign == SUBTITLES::HorizontalAlign::RIGHT)
+      rOpts.horizontalAlignment = SUBTITLES::STYLE::HorizontalAlign::RIGHT;
     else
-      rOpts.horizontalAlignment = KODI::SUBTITLES::HorizontalAlignment::CENTER;
+      rOpts.horizontalAlignment = SUBTITLES::STYLE::HorizontalAlign::CENTER;
   }
 
   // changes: Detect changes from previously rendered images, if > 0 they are changed
@@ -454,14 +551,6 @@ COverlay* CRenderer::ConvertLibass(
   overlay = new COverlayQuadsDX(images, rOpts.frameWidth, rOpts.frameHeight);
 #endif
 
-  // scale to video dimensions
-  if (overlay)
-  {
-    overlay->m_width = rOpts.frameWidth / rOpts.videoWidth;
-    overlay->m_height = rOpts.frameHeight / rOpts.videoHeight;
-    overlay->m_x = (rOpts.videoWidth - rOpts.frameWidth) / 2 / rOpts.videoWidth;
-    overlay->m_y = (rOpts.videoHeight - rOpts.frameHeight) / 2 / rOpts.videoHeight;
-  }
   m_textureCache[m_textureid] = overlay;
   o->m_textureid = m_textureid;
   m_textureid++;
@@ -477,10 +566,11 @@ COverlay* CRenderer::Convert(CDVDOverlay* o, double pts)
     CDVDOverlayLibass* ovAss = static_cast<CDVDOverlayLibass*>(o);
     if (!ovAss || !ovAss->GetLibassHandler())
       return nullptr;
-    bool updateStyle = !m_overlayStyle || m_forceUpdateOverlayStyle;
+    bool updateStyle = !m_overlayStyle || m_isSettingsChanged;
     if (updateStyle)
     {
-      m_forceUpdateOverlayStyle = false;
+      m_isSettingsChanged = false;
+      LoadSettings();
       CreateSubtitlesStyle();
     }
 
@@ -526,10 +616,24 @@ void CRenderer::Notify(const Observable& obs, const ObservableMessage msg)
   {
     case ObservableMessageSettingsChanged:
     {
-      m_forceUpdateOverlayStyle = true;
+      m_isSettingsChanged = true;
+      break;
+    }
+    case ObservableMessagePositionChanged:
+    {
+      std::unique_lock<CCriticalSection> lock(m_section);
+      m_subtitlePosResInfo = POSRESINFO_UNSET;
       break;
     }
     default:
       break;
   }
+}
+
+void CRenderer::LoadSettings()
+{
+  const auto settings{CServiceBroker::GetSettingsComponent()->GetSubtitlesSettings()};
+  m_subtitleHorizontalAlign = settings->GetHorizontalAlignment();
+  m_subtitleAlign = settings->GetAlignment();
+  ResetSubtitlePosition();
 }

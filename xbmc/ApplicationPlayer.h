@@ -10,6 +10,7 @@
 
 #include "SeekHandler.h"
 #include "cores/IPlayer.h"
+#include "cores/MenuType.h"
 #include "threads/CriticalSection.h"
 #include "threads/SystemClock.h"
 #include "windowing/Resolution.h"
@@ -36,9 +37,9 @@ public:
   // player management
   void ClosePlayer();
   void ResetPlayer();
-  std::string GetCurrentPlayer();
-  float GetPlaySpeed();
-  float GetPlayTempo();
+  std::string GetCurrentPlayer() const;
+  float GetPlaySpeed() const;
+  float GetPlayTempo() const;
   bool HasPlayer() const;
   bool OpenFile(const CFileItem& item, const CPlayerOptions& options,
                 const CPlayerCoreFactory &factory,
@@ -92,7 +93,6 @@ public:
   void GetSubtitleStreamInfo(int index, SubtitleStreamInfo &info);
   bool GetSubtitleVisible();
   std::shared_ptr<TextCacheStruct_t> GetTeletextCache();
-  std::string GetRadioText(unsigned int line);
   int64_t GetTime() const;
   int64_t GetMinTime() const;
   int64_t GetMaxTime() const;
@@ -105,7 +105,13 @@ public:
   void SetProgram(int progId);
   int GetProgramsCount();
   bool HasAudio() const;
-  bool HasMenu() const;
+
+  /*!
+   * \brief Get the supported menu type
+   * \return The supported menu type
+  */
+  MenuType GetSupportedMenuType() const;
+
   bool HasVideo() const;
   bool HasGame() const;
   bool HasRDS() const;
@@ -138,6 +144,15 @@ public:
   void SetSubtitle(int iStream);
   void SetSubTitleDelay(float fValue = 0.0f);
   void SetSubtitleVisible(bool bVisible);
+
+  /*!
+   * \brief Set the subtitle vertical position,
+   * it depends on current screen resolution
+   * \param value The subtitle position in pixels
+   * \param save If true, the value will be saved to resolution info
+   */
+  void SetSubtitleVerticalPosition(const int value, bool save);
+
   void SetTime(int64_t time);
   void SetTotalTime(int64_t time);
   void SetVideoStream(int iStream);
@@ -145,7 +160,7 @@ public:
   void SetSpeed(float speed);
   bool SupportsTempo();
 
-  CVideoSettings GetVideoSettings();
+  CVideoSettings GetVideoSettings() const;
   void SetVideoSettings(CVideoSettings& settings);
 
   CSeekHandler& GetSeekHandler();
@@ -158,7 +173,8 @@ public:
   bool HasGameAgent();
 
 private:
-  std::shared_ptr<IPlayer> GetInternal() const;
+  std::shared_ptr<const IPlayer> GetInternal() const;
+  std::shared_ptr<IPlayer> GetInternal();
   void CreatePlayer(const CPlayerCoreFactory &factory, const std::string &player, IPlayerCallback& callback);
   void CloseFile(bool reopen = false);
 

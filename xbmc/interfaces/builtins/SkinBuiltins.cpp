@@ -458,6 +458,38 @@ static int SkinDebug(const std::vector<std::string>& params)
   return 0;
 }
 
+/*! \brief Starts a given skin timer
+ *  \param params The parameters.
+ *  \details params[0] = Name of the timer.
+ *  \return -1 in case of error, 0 in case of success
+ */
+static int SkinTimerStart(const std::vector<std::string>& params)
+{
+  if (params.empty())
+  {
+    return -1;
+  }
+
+  g_SkinInfo->TimerStart(params[0]);
+  return 0;
+}
+
+/*! \brief Stops a given skin timer
+ *  \param params The parameters.
+ *  \details params[0] = Name of the timer.
+ *  \return -1 in case of error, 0 in case of success
+ */
+static int SkinTimerStop(const std::vector<std::string>& params)
+{
+  if (params.empty())
+  {
+    return -1;
+  }
+
+  g_SkinInfo->TimerStop(params[0]);
+  return 0;
+}
+
 // Note: For new Texts with comma add a "\" before!!! Is used for table text.
 //
 /// \page page_List_of_built_in_functions
@@ -507,10 +539,10 @@ static int SkinDebug(const std::vector<std::string>& params)
 ///     @param[in] type[1\,...]           Add-on types to allow selecting.
 ///   }
 ///   \table_row2_l{
-///     <b>`Skin.SetBool(setting[\,value)`</b>
-///     ,
+///     <b>`Skin.SetBool(setting[\,value])`</b>
+///     \anchor Skin_SetBool,
 ///     Sets the skin `setting` to true\, for use with the conditional visibility
-///     tags containing `Skin.HasSetting(setting)`. The settings are saved
+///     tags containing \link Skin_HasSetting `Skin.HasSetting(setting)`\endlink. The settings are saved
 ///     per-skin in settings.xml just like all the other Kodi settings.
 ///     @param[in] setting               Name of skin setting.
 ///     @param[in] value                 Value to set ("false"\, or "true") (optional).
@@ -558,7 +590,7 @@ static int SkinDebug(const std::vector<std::string>& params)
 ///   }
 ///   \table_row2_l{
 ///     <b>`Skin.SetNumeric(numeric[\,value])`</b>
-///     ,
+///     \anchor Skin_SetNumeric,
 ///     Pops up a keyboard dialog and allows the user to input a numerical.
 ///     @param[in] numeric               Name of skin setting.
 ///     @param[in] value                 Value of skin setting (optional).
@@ -575,17 +607,19 @@ static int SkinDebug(const std::vector<std::string>& params)
 ///   }
 ///   \table_row2_l{
 ///     <b>`Skin.SetString(string[\,value])`</b>
-///     ,
+///     \anchor Skin_SetString,
 ///     Pops up a keyboard dialog and allows the user to input a string which can
 ///     be used in a label control elsewhere in the skin via the info tag
-///     `Skin.String(string)`. If the value parameter is specified\, then the
+///     \link Skin_StringValue `Skin.String(string)`\endlink. The value of the setting
+///     can also be compared to another value using the info bool \link Skin_StringCompare `Skin.String(string\, value)`\endlink.
+///     If the value parameter is specified\, then the
 ///     keyboard dialog does not pop up\, and the string is set directly.
 ///     @param[in] string                Name of skin setting.
 ///     @param[in] value                 Value of skin setting (optional).
 ///   }
 ///   \table_row2_l{
 ///     <b>`Skin.Theme(cycle)`</b>
-///     ,
+///     \anchor Skin_CycleTheme,
 ///     Cycles the skin theme. Skin.theme(-1) will go backwards.
 ///     @param[in] cycle                 0 or 1 to increase theme\, -1 to decrease.
 ///   }
@@ -601,27 +635,45 @@ static int SkinDebug(const std::vector<std::string>& params)
 ///     containing `Skin.HasSetting(setting)`.
 ///     @param[in] setting               Skin setting to toggle
 ///  }
+///   \table_row2_l{
+///     <b>`Skin.TimerStart(timer)`</b>
+///     \anchor Builtin_SkinStartTimer,
+///     Starts the timer with name `timer`
+///     @param[in] timer               The name of the timer
+///     <p><hr>
+///     @skinning_v20 **[New builtin]** \link Builtin_SkinStartTimer `Skin.TimerStart(timer)`\endlink
+///     <p>
+///  }
+///   \table_row2_l{
+///     <b>`Skin.TimerStop(timer)`</b>
+///     \anchor Builtin_SkinStopTimer,
+///     Stops the timer with name `timer`
+///     @param[in] timer               The name of the timer
+///     <p><hr>
+///     @skinning_v20 **[New builtin]** \link Builtin_SkinStopTimer `Skin.TimerStop(timer)`\endlink
+///     <p>
+///  }
 /// \table_end
 ///
 
 CBuiltins::CommandMap CSkinBuiltins::GetOperations() const
 {
-  return {
-           {"reloadskin",         {"Reload Kodi's skin", 0, ReloadSkin}},
-           {"unloadskin",         {"Unload Kodi's skin", 0, UnloadSkin}},
-           {"skin.reset",         {"Resets a skin setting to default", 1, SkinReset}},
-           {"skin.resetsettings", {"Resets all skin settings", 0, SkinResetAll}},
-           {"skin.setaddon",      {"Prompts and set an addon", 2, SetAddon}},
-           {"skin.selectbool",    {"Prompts and set a skin setting", 2, SelectBool}},
-           {"skin.setbool",       {"Sets a skin setting on", 1, SetBool}},
-           {"skin.setfile",       {"Prompts and sets a file", 1, SetFile}},
-           {"skin.setimage",      {"Prompts and sets a skin image", 1, SetImage}},
-           {"skin.setcolor",      {"Prompts and sets a skin color", 1, SetColor}},
-           {"skin.setnumeric",    {"Prompts and sets numeric input", 1, SetNumeric}},
-           {"skin.setpath",       {"Prompts and sets a skin path", 1, SetPath}},
-           {"skin.setstring",     {"Prompts and sets skin string", 1, SetString}},
-           {"skin.theme",         {"Control skin theme", 1, SetTheme}},
-           {"skin.toggledebug",   {"Toggle skin debug", 0, SkinDebug}},
-           {"skin.togglesetting", {"Toggles a skin setting on or off", 1, ToggleSetting}}
-  };
+  return {{"reloadskin", {"Reload Kodi's skin", 0, ReloadSkin}},
+          {"unloadskin", {"Unload Kodi's skin", 0, UnloadSkin}},
+          {"skin.reset", {"Resets a skin setting to default", 1, SkinReset}},
+          {"skin.resetsettings", {"Resets all skin settings", 0, SkinResetAll}},
+          {"skin.setaddon", {"Prompts and set an addon", 2, SetAddon}},
+          {"skin.selectbool", {"Prompts and set a skin setting", 2, SelectBool}},
+          {"skin.setbool", {"Sets a skin setting on", 1, SetBool}},
+          {"skin.setfile", {"Prompts and sets a file", 1, SetFile}},
+          {"skin.setimage", {"Prompts and sets a skin image", 1, SetImage}},
+          {"skin.setcolor", {"Prompts and sets a skin color", 1, SetColor}},
+          {"skin.setnumeric", {"Prompts and sets numeric input", 1, SetNumeric}},
+          {"skin.setpath", {"Prompts and sets a skin path", 1, SetPath}},
+          {"skin.setstring", {"Prompts and sets skin string", 1, SetString}},
+          {"skin.theme", {"Control skin theme", 1, SetTheme}},
+          {"skin.toggledebug", {"Toggle skin debug", 0, SkinDebug}},
+          {"skin.togglesetting", {"Toggles a skin setting on or off", 1, ToggleSetting}},
+          {"skin.timerstart", {"Starts a given skin timer", 1, SkinTimerStart}},
+          {"skin.timerstop", {"Stops a given skin timer", 1, SkinTimerStop}}};
 }

@@ -41,14 +41,10 @@
 // Only required for Py3 < 3.7
 PyThreadState* savestate;
 
+bool XBPython::m_bInitialized = false;
+
 XBPython::XBPython()
 {
-  m_bInitialized = false;
-  m_mainThreadState = NULL;
-  m_iDllScriptCounter = 0;
-  m_vecPlayerCallbackList.clear();
-  m_vecMonitorCallbackList.clear();
-
   CServiceBroker::GetAnnouncementManager()->AddAnnouncer(this);
 }
 
@@ -534,10 +530,6 @@ bool XBPython::OnScriptInitialized(ILanguageInvoker* invoker)
     // Acquire GIL if thread doesn't currently hold.
     if (!PyGILState_Check())
       PyEval_RestoreThread((PyThreadState*)m_mainThreadState);
-
-    const wchar_t* python_argv[1] = {L""};
-    //! @bug libpython isn't const correct
-    PySys_SetArgv(1, const_cast<wchar_t**>(python_argv));
 
     if (!(m_mainThreadState = PyThreadState_Get()))
       CLog::Log(LOGERROR, "Python threadstate is NULL.");

@@ -7,7 +7,8 @@ This guide has been tested using Xcode 11.3.1 running on MacOS 10.15.2 (Catalina
 1. **[Document conventions](#1-document-conventions)**
 2. **[Prerequisites](#2-prerequisites)**
 3. **[Get the source code](#3-get-the-source-code)**
-4. **[Configure and build tools and dependencies](#4-configure-and-build-tools-and-dependencies)**
+4. **[Configure and build tools and dependencies](#4-configure-and-build-tools-and-dependencies)**  
+  4.1. **[Advanced Configure Options](#41-Advanced-Configure-Options)**  
 5. **[Generate Kodi Build files](#5-Generate-Kodi-Build-files)**  
   5.1. **[Generate XCode Project Files](#51-Generate-Xcode-Project-Files)**  
   5.2. **[Build with Xcode](#62-build)**  
@@ -63,10 +64,10 @@ Several different strategies are used to draw your attention to certain pieces o
 * Device with **tvOS 11.0 or newer** to install Kodi after build.
 
 Building for tvOS should work with the following combinations of Xcode and macOS versions:
-  * Xcode 9.x against tvOS SDK 11.x on 10.13.x (High Sierra)(recommended)
-  * Xcode 9.x against tvOS SDK 11.x on 10.14.x (Mojave)(recommended)
-  * Xcode 10.x against tvOS SDK 12.x on 10.14.x (Mojave)(recommended)
+  * Xcode 12.4 against tvOS SDK 14.3 on 10.15.7 (Catalina)(recommended)(CI)
+  * Xcode 13.x against tvOS SDK 15.4 on 12.x (Monterey)(recommended)
 
+Team Kodi CI infrastructure is limited, and therefore we only have the single combination tested. Newer xcode/macos combinations generally should work, however the team does not actively test/use pre-release versions, so use with caution. Earlier versions may work, however we dont actively support them, so use with caution.
 **WARNING:** Start Xcode after installation finishes. You need to accept the licenses and install missing components.
 
 **[back to top](#table-of-contents)**
@@ -108,6 +109,78 @@ make -j$(getconf _NPROCESSORS_ONLN)
 ```
 ./configure --host=aarch64-apple-darwin --with-platform=tvos --with-sdk=11.0
 ```
+
+### 4.1. Advanced Configure Options
+
+
+**All platforms:**
+
+```
+--with-toolchain=<path>
+```
+  specify path to toolchain. Auto set for android. Defaults to xcode root for darwin, /usr for linux
+
+```
+--enable-debug=<yes:no>
+```
+  enable debugging information (default is yes)
+
+```
+--disable-ccache
+```
+  disable ccache
+
+```
+--with-tarballs=<path>
+```
+  path where tarballs will be saved [prefix/xbmc-tarballs]
+
+```
+--with-cpu=<cpu>
+```
+  optional. specify target cpu. guessed if not specified
+
+```
+--with-linker=<linker>
+```
+  specify linker to use. (default is ld)
+
+```
+--with-platform=<platform>
+```
+  target platform
+
+```
+--enable-gplv3=<yes:no>
+```
+  enable gplv3 components. (default is yes)
+
+```
+--with-target-cflags=<cflags>
+```
+  C compiler flags (target)
+
+```
+--with-target-cxxflags=<cxxflags>
+```
+  C++ compiler flags (target)
+
+```
+--with-target-ldflags=<ldflags>
+```
+  linker flags. Use e.g. for -l<lib> (target)
+
+```
+--with-ffmpeg-options
+```
+  FFmpeg configure options, e.g. --enable-vaapi (target)
+
+**Apple Specific:**
+
+```
+--with-sdk=<sdknumber>
+```
+  specify sdk platform version.
 
 **[back to top](#table-of-contents)**
 

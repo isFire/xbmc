@@ -73,9 +73,13 @@ macro(buildFFMPEG)
   set(LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
   list(APPEND LINKER_FLAGS ${SYSTEM_LDFLAGS})
 
+  # Some list shenanigans not being passed through without stringify/listify
+  # externalproject_add allows declaring list separator to generate a list for the target
+  string(REPLACE ";" "|" FFMPEG_MODULE_PATH "${CMAKE_MODULE_PATH}")
+  set(FFMPEG_LIST_SEPARATOR LIST_SEPARATOR |)
+
   set(CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}
-                 -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                 -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
+                 -DCMAKE_MODULE_PATH=${FFMPEG_MODULE_PATH}
                  -DFFMPEG_VER=${FFMPEG_VER}
                  -DCORE_SYSTEM_NAME=${CORE_SYSTEM_NAME}
                  -DCORE_PLATFORM_NAME=${CORE_PLATFORM_NAME_LC}
@@ -94,6 +98,12 @@ macro(buildFFMPEG)
                     ${CMAKE_SOURCE_DIR}/tools/depends/target/ffmpeg/CMakeLists.txt
                     <SOURCE_DIR>)
 
+  if(CMAKE_GENERATOR STREQUAL Xcode)
+    set(FFMPEG_GENERATOR CMAKE_GENERATOR "Unix Makefiles")
+  endif()
+
+  set(FFMPEG_LIB_TYPE STATIC)
+
   BUILD_DEP_TARGET()
 
   if(ENABLE_INTERNAL_DAV1D)
@@ -108,12 +118,12 @@ macro(buildFFMPEG)
 "#!${BASH_COMMAND}
 if [[ $@ == *${APP_NAME_LC}.bin* || $@ == *${APP_NAME_LC}${APP_BINARY_SUFFIX}* || $@ == *${APP_NAME_LC}.so* || $@ == *${APP_NAME_LC}-test* ]]
 then
-  avformat=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavcodec`
-  avcodec=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavformat`
-  avfilter=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavfilter`
-  avutil=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavutil`
-  swscale=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libswscale`
-  swresample=`PKG_CONFIG_PATH=${CMAKE_BINARY_DIR}/${CORE_BUILD_DIR}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libswresample`
+  avcodec=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavcodec`
+  avformat=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavformat`
+  avfilter=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavfilter`
+  avutil=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libavutil`
+  swscale=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libswscale`
+  swresample=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig ${PKG_CONFIG_EXECUTABLE} --libs --static libswresample`
   gnutls=`PKG_CONFIG_PATH=${DEPENDS_PATH}/lib/pkgconfig/ ${PKG_CONFIG_EXECUTABLE}  --libs-only-l --static --silence-errors gnutls`
   $@ $avcodec $avformat $avcodec $avfilter $swscale $swresample -lpostproc $gnutls
 else
@@ -273,7 +283,6 @@ else()
       set(FFMPEG_LIB_TYPE SHARED)
       foreach(_fflib IN LISTS FFMPEG_LIBRARIES)
         if(${_fflib} MATCHES ".+\.a$" AND PC_FFMPEG_STATIC_LDFLAGS)
-          set(FFMPEG_LDFLAGS ${PC_FFMPEG_STATIC_LDFLAGS} CACHE STRING "ffmpeg linker flags" FORCE)
           set(FFMPEG_LIB_TYPE STATIC)
           break()
         endif()

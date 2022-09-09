@@ -19,6 +19,8 @@
 #include <memory>
 #include <string>
 
+using namespace KODI;
+
 COverlayCodecWebVTT::COverlayCodecWebVTT() : CDVDOverlayCodec("WebVTT Subtitle Decoder")
 {
   m_pOverlay = nullptr;
@@ -76,6 +78,14 @@ OverlayMessage COverlayCodecWebVTT::Decode(DemuxPacket* pPacket)
   const char* data = reinterpret_cast<const char*>(pPacket->pData);
   std::vector<subtitleData> subtitleList;
 
+  m_webvttHandler.Reset();
+
+  SubtitlePacketExtraData sideData;
+  if (GetSubtitlePacketExtraData(pPacket, sideData))
+  {
+    m_webvttHandler.SetPeriodStart(sideData.m_chapterStartTime);
+  }
+
   if (m_isISOFormat)
   {
     double prevSubStopTime = 0.0;
@@ -113,7 +123,7 @@ OverlayMessage COverlayCodecWebVTT::Decode(DemuxPacket* pPacket)
 
   for (auto& subData : subtitleList)
   {
-    KODI::SUBTITLES::subtitleOpts opts;
+    SUBTITLES::STYLE::subtitleOpts opts;
     opts.useMargins = subData.useMargins;
     opts.marginLeft = subData.marginLeft;
     opts.marginRight = subData.marginRight;
@@ -137,6 +147,11 @@ void COverlayCodecWebVTT::Flush()
 {
   if (m_allowFlush)
   {
+    if (m_pOverlay)
+    {
+      m_pOverlay->Release();
+      m_pOverlay = nullptr;
+    }
     m_previousSubIds.clear();
     FlushSubtitles();
   }
@@ -147,7 +162,7 @@ CDVDOverlay* COverlayCodecWebVTT::GetOverlay()
   if (m_pOverlay)
     return nullptr;
   m_pOverlay = CreateOverlay();
-  m_pOverlay->SetOverlayContainerFlushable(false);
-  m_pOverlay->SetForcedMargins(true);
+  m_pOverlay->SetOverlayContainerFlushable(m_allowFlush);
+  m_pOverlay->SetForcedMargins(m_webvttHandler.IsForcedMargins());
   return m_pOverlay->Acquire();
 }

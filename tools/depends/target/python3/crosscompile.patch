@@ -18,23 +18,6 @@
  case $MACHDEP in
 --- a/Makefile.pre.in
 +++ b/Makefile.pre.in
-@@ -38,7 +38,6 @@
- MAINCC=		@MAINCC@
- LINKCC=		@LINKCC@
- AR=		@AR@
--READELF=	@READELF@
- SOABI=		@SOABI@
- LDVERSION=	@LDVERSION@
- LIBPYTHON=	@LIBPYTHON@
-@@ -634,7 +634,7 @@
- 		$(PYTHON_FOR_BUILD) $(srcdir)/setup.py $$quiet build"; \
- 	$(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' \
- 		_TCLTK_INCLUDES='$(TCLTK_INCLUDES)' _TCLTK_LIBS='$(TCLTK_LIBS)' \
--		$(PYTHON_FOR_BUILD) $(srcdir)/setup.py $$quiet build
-+		PYTHONXCPREFIX='$(DESTDIR)$(prefix)' $(PYTHON_FOR_BUILD) $(srcdir)/setup.py $$quiet build
- 
- 
- # Build static library
 @@ -1694,10 +1694,11 @@
  # This goes into $(exec_prefix)
  sharedinstall: sharedmods

@@ -11,9 +11,11 @@
 
 #include "BaseRenderer.h"
 #include "cores/VideoPlayer/DVDSubtitles/SubtitlesStyle.h"
+#include "settings/SubtitlesSettings.h"
 #include "threads/CriticalSection.h"
 #include "utils/Observer.h"
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <vector>
@@ -24,30 +26,6 @@ class CDVDOverlayImage;
 class CDVDOverlaySpu;
 class CDVDOverlaySSA;
 class CDVDOverlayText;
-
-enum SubtitleAlign
-{
-  SUBTITLE_ALIGN_MANUAL = 0,
-  SUBTITLE_ALIGN_BOTTOM_INSIDE,
-  SUBTITLE_ALIGN_BOTTOM_OUTSIDE,
-  SUBTITLE_ALIGN_TOP_INSIDE,
-  SUBTITLE_ALIGN_TOP_OUTSIDE
-};
-
-enum subtitleHorizontalAlign
-{
-  SUBTITLE_HORIZONTAL_ALIGN_LEFT = 0,
-  SUBTITLE_HORIZONTAL_ALIGN_CENTER,
-  SUBTITLE_HORIZONTAL_ALIGN_RIGHT
-};
-
-enum subtitleBackgroundType
-{
-  SUBTITLE_BACKGROUNDTYPE_NONE = 0,
-  SUBTITLE_BACKGROUNDTYPE_SHADOW,
-  SUBTITLE_BACKGROUNDTYPE_BOX,
-  SUBTITLE_BACKGROUNDTYPE_SQUAREBOX
-};
 
 namespace OVERLAY {
 
@@ -88,12 +66,20 @@ namespace OVERLAY {
       POSITION_RELATIVE
     } m_pos;
 
-    float m_x;
-    float m_y;
-    float m_width;
-    float m_height;
+    float m_x{0};
+    float m_y{0};
+    float m_width{1.0f};
+    float m_height{1.0f};
     float m_source_width{0}; // Video source width resolution used to calculate aspect ratio
     float m_source_height{0}; // Video source height resolution used to calculate aspect ratio
+
+  protected:
+    /*!
+     * \brief Given the resolution ratio determines if it is a 4/3 resolution
+     * \param resRatio The resolution ratio (the results of width / height)
+     * \return True if the ratio refer to a 4/3 resolution, otherwise false
+     */
+    bool IsSquareResolution(float resRatio) { return resRatio > 1.22f && resRatio < 1.34f; }
   };
 
   class CRenderer : public Observer
@@ -102,18 +88,47 @@ namespace OVERLAY {
     CRenderer();
     virtual ~CRenderer();
 
-    // implementation of Observer
+    // Implementation of Observer
     void Notify(const Observable& obs, const ObservableMessage msg) override;
 
     void AddOverlay(CDVDOverlay* o, double pts, int index);
     virtual void Render(int idx);
+
+    /*!
+     * \brief Release resources
+     */
+    void UnInit();
+
     void Flush();
+
+    /*!
+     * \brief Reset to default values
+     */
+    void Reset();
+
     void Release(int idx);
     bool HasOverlay(int idx);
     void SetVideoRect(CRect &source, CRect &dest, CRect &view);
     void SetStereoMode(const std::string &stereomode);
 
+    /*!
+     * \brief Set the subtitle vertical position,
+     * it depends on current screen resolution
+     * \param value The subtitle position in pixels
+     * \param save If true, the value will be saved to resolution info
+     */
+    void SetSubtitleVerticalPosition(const int value, bool save);
+
   protected:
+    /*!
+     * \brief Reset the subtitle position to default value
+     */
+    void ResetSubtitlePosition();
+
+    /*!
+     * \brief Called when the screen resolution is changed
+     */
+    void OnViewChange();
 
     struct SElement
     {
@@ -135,10 +150,11 @@ namespace OVERLAY {
     * \param subStyle The style to be used, MUST BE SET ONLY at the first call or when user change settings
     * \return True if success, false if error
     */
-    COverlay* ConvertLibass(CDVDOverlayLibass* o,
-                            double pts,
-                            bool updateStyle,
-                            const std::shared_ptr<struct KODI::SUBTITLES::style>& overlayStyle);
+    COverlay* ConvertLibass(
+        CDVDOverlayLibass* o,
+        double pts,
+        bool updateStyle,
+        const std::shared_ptr<struct KODI::SUBTITLES::STYLE::style>& overlayStyle);
 
     void CreateSubtitlesStyle();
 
@@ -146,14 +162,37 @@ namespace OVERLAY {
     void ReleaseCache();
     void ReleaseUnused();
 
+    /*!
+     * \brief Load and store settings locally
+     */
+    void LoadSettings();
+
+    enum PositonResInfoState
+    {
+      POSRESINFO_UNSET = -1,
+      POSRESINFO_SAVE_CHANGES = -2,
+    };
+
     CCriticalSection m_section;
     std::vector<SElement> m_buffers[NUM_BUFFERS];
     std::map<unsigned int, COverlay*> m_textureCache;
     static unsigned int m_textureid;
-    CRect m_rv, m_rs, m_rd;
+    CRect m_rv; // Frame size
+    CRect m_rs; // Source size
+    CRect m_rd; // Video size, may be influenced by video settings (e.g. zoom)
     std::string m_stereomode;
+    // Current subtitle position
+    int m_subtitlePosition{0};
+    // Current subtitle position from resolution info,
+    // or PositonResInfoState enum values for deferred processing
+    int m_subtitlePosResInfo{POSRESINFO_UNSET};
+    int m_subtitleVerticalMargin{0};
+    bool m_saveSubtitlePosition{false}; // To save subtitle position permanently
+    KODI::SUBTITLES::HorizontalAlign m_subtitleHorizontalAlign{
+        KODI::SUBTITLES::HorizontalAlign::CENTER};
+    KODI::SUBTITLES::Align m_subtitleAlign{KODI::SUBTITLES::Align::BOTTOM_OUTSIDE};
 
-    std::shared_ptr<struct KODI::SUBTITLES::style> m_overlayStyle;
-    bool m_forceUpdateOverlayStyle{false};
+    std::shared_ptr<struct KODI::SUBTITLES::STYLE::style> m_overlayStyle;
+    std::atomic<bool> m_isSettingsChanged{false};
   };
 }
