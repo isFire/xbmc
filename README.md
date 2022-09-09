@@ -26,7 +26,7 @@
 </a>
 
 <h1 align="center">
-  Welcome to Kodi Home Theater Software!
+  这是一个对中国用户友好的Kodi镜像!
 </h1>
 
 Kodi is an award-winning **free and open source** software media player and entertainment hub for digital media. Available as a native application for **Android, Linux, BSD, macOS, iOS, tvOS and Windows operating systems**, Kodi runs on most common processor architectures.
