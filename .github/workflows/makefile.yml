@@ -24,7 +24,7 @@ jobs:
         id: extract_branch
 
       - name: 进入编译目录
-        run: |
+        run: 
              cd xbmc-friendly-china/tools/depends
              echo '开始配置Linux平台'
              ./configure --with-toolchain=/opt/toolchains/my-example-toolchain/ --prefix=/opt/xbmc-deps --host=arm-linux-gnueabi --with-rendersystem=gles
