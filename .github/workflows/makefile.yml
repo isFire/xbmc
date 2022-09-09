@@ -27,9 +27,6 @@ jobs:
         run: |
              echo '进入预编译环境'
              cd ./tools/depends/pre-depends/autoconf-pre-depends
-             make clean & make 
-             echo '开始配置Linux平台'
-             cd ../..
              ./bootstrap 
              echo '开始编译工具'
              make -j$(getconf _NPROCESSORS_ONLN)
