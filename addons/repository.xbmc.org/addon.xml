@@ -9,10 +9,10 @@
 	<extension point="xbmc.addon.repository">
 		<!-- Do not forget to bump add-on version when changing paths to force a repo refresh -->
 		<dir>
-			<info>http://mirrors.kodi.tv/addons/nexus/addons.xml.gz</info>
-			<checksum verify="sha256">http://mirrors.kodi.tv/addons/nexus/addons.xml.gz?sha256</checksum>
-			<datadir>https://mirrors.kodi.tv/addons/nexus</datadir>
-			<artdir>http://mirrors.kodi.tv/addons/nexus</artdir>
+			<info>http://mirrors.ustc.edu.cn/xbmc/addons/nexus/addons.xml.gz</info>
+			<checksum verify="sha256">http://mirrors.ustc.edu.cn/xbmc/addons/nexus/addons.xml.gz?sha256</checksum>
+			<datadir>https://mirrors.ustc.edu.cn/xbmc/addons/nexus</datadir>
+			<artdir>http://mirrors.ustc.edu.cn/xbmc/addons/nexus</artdir>
 			<hashes>sha256</hashes>
 		</dir>
 	</extension>
