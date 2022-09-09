@@ -1,4 +1,4 @@
-![Kodi Logo](resources/banner_slim.png)
+                                                                                                                                                                                                ![Kodi Logo](resources/banner_slim.png)
 
 # Kodi's Documentation Home
 Welcome to Kodi's documentation home. Geared at developers, it contains platform specific build guides, **[code guidelines](CODE_GUIDELINES.md)**, a **[git guide](GIT-FU.md)** streamlined for Kodi's workflow and Doxygen's resources, ready to generate **[code documentation](doxygen/README.md)**.
