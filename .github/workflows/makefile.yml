@@ -26,11 +26,10 @@ jobs:
       - name: 进入编译目录
         run: |
              echo '进入预编译环境'
-             cd ./tools/depends/pre-depends/autoconf-pre-depends
-             make
-             cd ../..
+             cd tools/depends
              ./bootstrap 
              echo '开始编译工具'
+             ./configure
              make -j$(getconf _NPROCESSORS_ONLN)
              
               
