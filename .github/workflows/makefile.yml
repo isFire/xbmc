@@ -25,6 +25,7 @@ jobs:
 
       - name: 进入编译目录
         run: |
+             PWD
              echo '打印当前目录$PWD,并进行多版本镜像编译'
              
 #       - name: 清汤白面's Action kodi-dev-kit
