@@ -27,7 +27,7 @@ jobs:
         run: |
              cd ./tools/depends
              echo '开始配置Linux平台'
-             ./configure --with-toolchain=/opt/toolchains/my-example-toolchain/ --prefix=/opt/xbmc-deps --host=arm-linux-gnueabi --with-rendersystem=gles
+             ./bootstrap 
              echo '开始编译工具'
              make -j$(getconf _NPROCESSORS_ONLN)
              
