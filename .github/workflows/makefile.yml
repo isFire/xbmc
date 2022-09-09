@@ -23,28 +23,27 @@ jobs:
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
 
-      - name: Set target dirs
+      - name: 进入编译目录
         run: |
-             mkdir ./build
-             sed -i 's/.*HTML_OUTPUT.*=.*/HTML_OUTPUT = ..\/..\/..\/..\/build\/kodi-dev-kit/' ./xbmc/addons/kodi-dev-kit/doxygen/Doxyfile
-             sed -i 's/.*HTML_OUTPUT.*=.*/HTML_OUTPUT = ..\/build\/kodi-base/' ./docs/doxygen/Doxyfile.doxy
-      - name: 清汤白面's Action kodi-dev-kit
-        uses: mattnotmitt/doxygen-action@v1.1.0
-        with:
-          doxyfile-path: "./Doxyfile"
-          working-directory: "./xbmc/addons/kodi-dev-kit/doxygen"
+             echo '打印当前目录$PWD,并进行多版本镜像编译'
+             
+#       - name: 清汤白面's Action kodi-dev-kit
+#         uses: mattnotmitt/doxygen-action@v1.1.0
+#         with:
+#           doxyfile-path: "./Doxyfile"
+#           working-directory: "./xbmc/addons/kodi-dev-kit/doxygen"
 
-      - name: 清汤白面's Action Kodi Base
-        uses: mattnotmitt/doxygen-action@v1.1.0
-        with:
-          doxyfile-path: "./Doxyfile.doxy"
-          working-directory: "./docs/doxygen"
+#       - name: 清汤白面's Action Kodi Base
+#         uses: mattnotmitt/doxygen-action@v1.1.0
+#         with:
+#           doxyfile-path: "./Doxyfile.doxy"
+#           working-directory: "./docs/doxygen"
 
-      - name: Deploy docs
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          deploy_key: ${{ secrets.DOC_ACTIONS_DEPLOY_KEY }}
-          external_repository: xbmc/docs.kodi.tv
-          publish_branch: main
-          destination_dir: ${{ steps.extract_branch.outputs.branch }}
-          publish_dir: "./build"
+#       - name: Deploy docs
+#         uses: peaceiris/actions-gh-pages@v3
+#         with:
+#           deploy_key: ${{ secrets.DOC_ACTIONS_DEPLOY_KEY }}
+#           external_repository: xbmc/docs.kodi.tv
+#           publish_branch: main
+#           destination_dir: ${{ steps.extract_branch.outputs.branch }}
+#           publish_dir: "./build"
