@@ -29,7 +29,7 @@ jobs:
              cd tools/depends
              ./bootstrap 
              echo '开始编译工具'
-             ./configure
+             ./configure --prefix=/opt/xbmc-depends
              make -j$(getconf _NPROCESSORS_ONLN)
              
               
