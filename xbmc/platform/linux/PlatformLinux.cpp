@@ -21,6 +21,8 @@
 
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
 
+#include "windowing/WinSystemHeadless.h"
+
 // clang-format off
 #if defined(HAS_GLES)
 #if defined(HAVE_WAYLAND)
@@ -60,6 +62,8 @@ bool CPlatformLinux::InitStageOne()
     return false;
 
   setenv("OS", "Linux", true); // for python scripts that check the OS
+
+  CWinSystemHeadless::RegisterMe();
 
 #if defined(HAS_GLES)
 #if defined(HAVE_WAYLAND)

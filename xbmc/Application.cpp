@@ -455,7 +455,7 @@ bool CApplication::CreateGUI()
 {
   m_frameMoveGuard.lock();
 
-  m_renderGUI = true;
+  m_renderGUI = m_windowing != "headless";
 
   auto windowSystems = KODI::WINDOWING::CWindowSystemFactory::GetWindowSystems();
 
@@ -674,7 +674,7 @@ bool CApplication::Initialize()
 
   bool uiInitializationFinished = false;
 
-  if (CServiceBroker::GetGUI()->GetWindowManager().Initialized())
+  if (m_windowing != "headless" && CServiceBroker::GetGUI()->GetWindowManager().Initialized())
   {
     const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
 
@@ -815,9 +815,12 @@ bool CApplication::Initialize()
 
   CLog::Log(LOGINFO, "initialize done");
 
-  CheckOSScreenSaverInhibitionSetting();
-  // reset our screensaver (starts timers etc.)
-  ResetScreenSaver();
+  if (m_windowing != "headless")
+  {
+    CheckOSScreenSaverInhibitionSetting();
+    // reset our screensaver (starts timers etc.)
+    ResetScreenSaver();
+  }
 
   // if the user interfaces has been fully initialized let everyone know
   if (uiInitializationFinished)
